@@ -5,6 +5,7 @@ import { DEFAULT_TIMER_PRESETS, createTimerPresetsFromMinutes } from "../shared/
 import type { FadeCurveConfig } from "../shared/fade";
 import type { TimerPresetPoint } from "../shared/timerPresets";
 import type {
+  FinishTimerMessage,
   PersistedTimerState,
   RuntimeMessage,
   SetTimerMessage,
@@ -64,6 +65,16 @@ export function onTimerStateChanged(
   chrome.runtime.onMessage.addListener((msg: TimerStateChangedMessage) => {
     if (msg.type === MESSAGE_TYPES.TIMER_STATE_CHANGED) {
       handler(msg.timerState);
+    }
+  });
+}
+
+export function onFinishTimer(handler: () => void): void {
+  if (!chromeOk()) return;
+
+  chrome.runtime.onMessage.addListener((msg: FinishTimerMessage) => {
+    if (msg.type === MESSAGE_TYPES.FINISH_TIMER) {
+      handler();
     }
   });
 }

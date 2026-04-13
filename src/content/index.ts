@@ -1,4 +1,4 @@
-import { getFadeCurvePreference, getFadeDurationPreference, getShowBannerPreference, getTimerPresetPreference, getTimerState, onStartFade, onTimerStateChanged, sendCancelTimer, sendSetTimer } from "./chrome";
+import { getFadeCurvePreference, getFadeDurationPreference, getShowBannerPreference, getTimerPresetPreference, getTimerState, onFinishTimer, onStartFade, onTimerStateChanged, sendCancelTimer, sendSetTimer } from "./chrome";
 import { BED_ICON } from "./constants";
 import { DEFAULT_FADE_CURVE_CONFIG, evaluateFadeCurve, resolveFadeCurvePoints } from "../shared/fade";
 import { DEFAULT_FADE_DURATION_SECONDS } from "../shared/fadeDuration";
@@ -37,7 +37,9 @@ import type { ContentTimerState, PersistedTimerState } from "../shared/types";
 
   let fadeInterval: ReturnType<typeof setInterval> | null = null;
   let tickInterval: ReturnType<typeof setInterval> | null = null;
+  let bannerInterval: ReturnType<typeof setInterval> | null = null;
   let trackedVideo: HTMLVideoElement | null = null;
+  let showBannerEnabled = true;
 
   setTimerPresets(DEFAULT_TIMER_PRESETS);
 
@@ -55,6 +57,12 @@ import type { ContentTimerState, PersistedTimerState } from "../shared/types";
       if (!state.timerActive) {
         state.fadeDuration = seconds;
       }
+    });
+  }
+
+  function refreshShowBannerPreference(): void {
+    getShowBannerPreference((show) => {
+      showBannerEnabled = show;
     });
   }
 
@@ -273,8 +281,10 @@ import type { ContentTimerState, PersistedTimerState } from "../shared/types";
 
     if (fadeInterval) clearInterval(fadeInterval);
     if (tickInterval) clearInterval(tickInterval);
+    if (bannerInterval) clearInterval(bannerInterval);
     fadeInterval = null;
     tickInterval = null;
+    bannerInterval = null;
 
     untrackVideo();
 
@@ -352,17 +362,18 @@ import type { ContentTimerState, PersistedTimerState } from "../shared/types";
 
     showFadeBanner();
 
-    if (fadeInterval) clearInterval(fadeInterval);
-    fadeInterval = setInterval(() => {
-      const video = getVideo();
-      if (!video || state.fadeStartTime == null || state.endTime == null) return;
+    const updateFadeFrame = () => {
+      if (state.fadeStartTime == null || state.endTime == null) return;
 
       const now = Date.now();
       const elapsed = now - state.fadeStartTime;
       const total = state.endTime - state.fadeStartTime;
       const t = Math.min(1, elapsed / total);
 
-      video.volume = Math.max(0, state.originalVolume * evaluateFadeCurve(t, state.fadeCurvePoints));
+      const video = getVideo();
+      if (video) {
+        video.volume = Math.max(0, state.originalVolume * evaluateFadeCurve(t, state.fadeCurvePoints));
+      }
 
       const banner = document.querySelector<HTMLElement>(".sf-fading-banner");
       const timeLabel = banner?.querySelector<HTMLElement>(".sf-banner-time");
@@ -371,10 +382,19 @@ import type { ContentTimerState, PersistedTimerState } from "../shared/types";
         timeLabel.textContent = formatTime(remaining);
         banner.style.setProperty("--progress", String(Math.max(0, 1 - t)));
       }
-    }, 500);
+    };
+
+    updateFadeFrame();
+
+    if (fadeInterval) clearInterval(fadeInterval);
+    fadeInterval = setInterval(() => {
+      updateFadeFrame();
+    }, 250);
   }
 
-  function finishTimer(): void {
+  function finishTimer(options?: { notifyBackground?: boolean }): void {
+    const notifyBackground = options?.notifyBackground ?? true;
+
     const video = getVideo();
     if (video) {
       video.volume = 0;
@@ -386,8 +406,10 @@ import type { ContentTimerState, PersistedTimerState } from "../shared/types";
 
     if (fadeInterval) clearInterval(fadeInterval);
     if (tickInterval) clearInterval(tickInterval);
+    if (bannerInterval) clearInterval(bannerInterval);
     fadeInterval = null;
     tickInterval = null;
+    bannerInterval = null;
 
     untrackVideo();
 
@@ -395,7 +417,9 @@ import type { ContentTimerState, PersistedTimerState } from "../shared/types";
       if (video) video.volume = state.originalVolume;
     }, 1000);
 
-    sendCancelTimer();
+    if (notifyBackground) {
+      sendCancelTimer();
+    }
 
     const btn = document.querySelector(".sf-player-btn");
     if (btn) btn.classList.remove("sf--active");
@@ -405,10 +429,33 @@ import type { ContentTimerState, PersistedTimerState } from "../shared/types";
 
   function showFadeBanner(): void {
     document.querySelectorAll(".sf-fading-banner").forEach((b) => b.remove());
-    getShowBannerPreference((show) => {
-      if (!show) return;
-      renderFadeBanner();
-    });
+    if (!showBannerEnabled || !state.timerActive) return;
+    renderFadeBanner();
+  }
+
+  function updateFadeBannerUI(): void {
+    if (state.endTime == null) return;
+
+    const banner = document.querySelector<HTMLElement>(".sf-fading-banner");
+    const timeLabel = banner?.querySelector<HTMLElement>(".sf-banner-time");
+    if (!banner || !timeLabel) return;
+
+    const now = Date.now();
+    const remaining = Math.max(0, (state.endTime - now) / 1000);
+    timeLabel.textContent = formatTime(remaining);
+
+    const fadeProgress = state.fadeStartTime == null || state.endTime <= state.fadeStartTime
+      ? 0
+      : Math.min(1, Math.max(0, (now - state.fadeStartTime) / (state.endTime - state.fadeStartTime)));
+    banner.style.setProperty("--progress", String(Math.max(0, 1 - fadeProgress)));
+  }
+
+  function startBannerTicker(): void {
+    if (bannerInterval) clearInterval(bannerInterval);
+    updateFadeBannerUI();
+    bannerInterval = setInterval(() => {
+      updateFadeBannerUI();
+    }, 250);
   }
 
   function renderFadeBanner(): void {
@@ -432,6 +479,7 @@ import type { ContentTimerState, PersistedTimerState } from "../shared/types";
 
     (player as HTMLElement).style.position = "relative";
     player.appendChild(banner);
+    startBannerTicker();
   }
 
   onStartFade(() => {
@@ -442,6 +490,10 @@ import type { ContentTimerState, PersistedTimerState } from "../shared/types";
 
   onTimerStateChanged((timerState) => {
     syncTimerState(timerState);
+  });
+
+  onFinishTimer(() => {
+    finishTimer({ notifyBackground: false });
   });
 
   function applyStoredTimer(resp: PersistedTimerState): void {
@@ -515,6 +567,7 @@ import type { ContentTimerState, PersistedTimerState } from "../shared/types";
 
   observer.observe(document.body, { childList: true, subtree: true });
   refreshTimerPresetsPreference();
+  refreshShowBannerPreference();
   refreshFadeCurvePreference();
   refreshFadeDurationPreference();
   chrome.storage?.onChanged.addListener((changes, areaName) => {
@@ -529,6 +582,9 @@ import type { ContentTimerState, PersistedTimerState } from "../shared/types";
     }
     if (areaName === "local" && changes.fadeDurationSeconds) {
       refreshFadeDurationPreference();
+    }
+    if (areaName === "local" && changes.showBanner) {
+      showBannerEnabled = changes.showBanner.newValue !== false;
     }
   });
   waitForPlayer();
