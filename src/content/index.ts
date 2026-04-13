@@ -1,4 +1,17 @@
-import { getFadeCurvePreference, getFadeDurationPreference, getShowBannerPreference, getTimerPresetPreference, getTimerState, onFinishTimer, onStartFade, onTimerStateChanged, sendCancelTimer, sendSetTimer } from "./chrome";
+import {
+  getFadeCurvePreference,
+  getFadeDurationPreference,
+  getShowBannerPreference,
+  getShowBannerTimeLeftPreference,
+  getShowBannerVolumePercentagePreference,
+  getTimerPresetPreference,
+  getTimerState,
+  onFinishTimer,
+  onStartFade,
+  onTimerStateChanged,
+  sendCancelTimer,
+  sendSetTimer,
+} from "./chrome";
 import { BED_ICON } from "./constants";
 import { DEFAULT_FADE_CURVE_CONFIG, evaluateFadeCurve, resolveFadeCurvePoints } from "../shared/fade";
 import { DEFAULT_FADE_DURATION_SECONDS } from "../shared/fadeDuration";
@@ -40,6 +53,8 @@ import type { ContentTimerState, PersistedTimerState } from "../shared/types";
   let bannerInterval: ReturnType<typeof setInterval> | null = null;
   let trackedVideo: HTMLVideoElement | null = null;
   let showBannerEnabled = true;
+  let showBannerTimeLeftEnabled = true;
+  let showBannerVolumePercentageEnabled = true;
   let settingVolume = false;
 
   setTimerPresets(DEFAULT_TIMER_PRESETS);
@@ -64,6 +79,39 @@ import type { ContentTimerState, PersistedTimerState } from "../shared/types";
   function refreshShowBannerPreference(): void {
     getShowBannerPreference((show) => {
       showBannerEnabled = show;
+      if (!state.isFading) return;
+
+      if (!showBannerEnabled) {
+        document.querySelectorAll(".sf-fading-banner").forEach((b) => b.remove());
+        if (bannerInterval) {
+          clearInterval(bannerInterval);
+          bannerInterval = null;
+        }
+        return;
+      }
+
+      document.querySelectorAll(".sf-fading-banner").forEach((b) => b.remove());
+      renderFadeBanner();
+    });
+  }
+
+  function refreshShowBannerTimeLeftPreference(): void {
+    getShowBannerTimeLeftPreference((show) => {
+      showBannerTimeLeftEnabled = show;
+      if (state.isFading && showBannerEnabled) {
+        document.querySelectorAll(".sf-fading-banner").forEach((b) => b.remove());
+        renderFadeBanner();
+      }
+    });
+  }
+
+  function refreshShowBannerVolumePercentagePreference(): void {
+    getShowBannerVolumePercentagePreference((show) => {
+      showBannerVolumePercentageEnabled = show;
+      if (state.isFading && showBannerEnabled) {
+        document.querySelectorAll(".sf-fading-banner").forEach((b) => b.remove());
+        renderFadeBanner();
+      }
     });
   }
 
@@ -401,13 +449,7 @@ import type { ContentTimerState, PersistedTimerState } from "../shared/types";
         safeSetVolume(video, Math.max(0, state.originalVolume * evaluateFadeCurve(t, state.fadeCurvePoints)));
       }
 
-      const banner = document.querySelector<HTMLElement>(".sf-fading-banner");
-      const timeLabel = banner?.querySelector<HTMLElement>(".sf-banner-time");
-      if (banner && timeLabel) {
-        const remaining = Math.max(0, (state.endTime - now) / 1000);
-        timeLabel.textContent = formatTime(remaining);
-        banner.style.setProperty("--progress", String(Math.max(0, 1 - t)));
-      }
+      updateFadeBannerUI();
     };
 
     updateFadeFrame();
@@ -464,20 +506,35 @@ import type { ContentTimerState, PersistedTimerState } from "../shared/types";
     renderFadeBanner();
   }
 
+  function getFadeProgressAt(now: number): number {
+    if (state.fadeStartTime == null || state.endTime == null || state.endTime <= state.fadeStartTime) return 0;
+    return Math.min(1, Math.max(0, (now - state.fadeStartTime) / (state.endTime - state.fadeStartTime)));
+  }
+
+  function getCurveVolumePercentAt(now: number): number {
+    const curveVolume = evaluateFadeCurve(getFadeProgressAt(now), state.fadeCurvePoints);
+    return Math.min(100, Math.max(0, Math.round(curveVolume * 100)));
+  }
+
   function updateFadeBannerUI(): void {
     if (state.endTime == null) return;
 
     const banner = document.querySelector<HTMLElement>(".sf-fading-banner");
     const timeLabel = banner?.querySelector<HTMLElement>(".sf-banner-time");
-    if (!banner || !timeLabel) return;
+    const volumeLabel = banner?.querySelector<HTMLElement>(".sf-banner-volume-value");
+    if (!banner) return;
 
     const now = Date.now();
     const remaining = Math.max(0, (state.endTime - now) / 1000);
-    timeLabel.textContent = formatTime(remaining);
+    if (timeLabel) {
+      timeLabel.textContent = formatTime(remaining);
+    }
+    const curveVolumePercent = getCurveVolumePercentAt(now);
+    if (volumeLabel) {
+      volumeLabel.textContent = `${curveVolumePercent}%`;
+    }
 
-    const fadeProgress = state.fadeStartTime == null || state.endTime <= state.fadeStartTime
-      ? 0
-      : Math.min(1, Math.max(0, (now - state.fadeStartTime) / (state.endTime - state.fadeStartTime)));
+    const fadeProgress = getFadeProgressAt(now);
     banner.style.setProperty("--progress", String(Math.max(0, 1 - fadeProgress)));
   }
 
@@ -497,11 +554,29 @@ import type { ContentTimerState, PersistedTimerState } from "../shared/types";
     const banner = document.createElement("div");
     banner.className = "sf-fading-banner sf-banner-animate";
 
-    const remaining = Math.max(0, (state.endTime - Date.now()) / 1000);
+    const now = Date.now();
+    const remaining = Math.max(0, (state.endTime - now) / 1000);
+    const curveVolumePercent = getCurveVolumePercentAt(now);
+    const timeStatHtml = showBannerTimeLeftEnabled
+      ? `<span class="sf-banner-stat sf-banner-stat--time" title="Time remaining">
+          <span class="sf-banner-stat-icon" aria-hidden="true">⏱️</span>
+          <strong class="sf-banner-time sf-banner-stat-value">${formatTime(remaining)}</strong>
+        </span>`
+      : "";
+    const volumeStatHtml = showBannerVolumePercentageEnabled
+      ? `<span class="sf-banner-stat sf-banner-stat--volume" title="Current fade volume">
+          <span class="sf-banner-stat-icon" aria-hidden="true">🔉</span>
+          <strong class="sf-banner-volume-value sf-banner-stat-value">${curveVolumePercent}%</strong>
+        </span>`
+      : "";
     banner.innerHTML = `
-      <span>Fading out in <strong class="sf-banner-time">${formatTime(remaining)}</strong></span>
+      <div class="sf-banner-main">
+        ${timeStatHtml}
+        ${volumeStatHtml}
+      </div>
       <button class="sf-banner-cancel">Cancel</button>
     `;
+
 
     banner.querySelector(".sf-banner-cancel")?.addEventListener("click", (e) => {
       e.stopPropagation();
@@ -599,6 +674,8 @@ import type { ContentTimerState, PersistedTimerState } from "../shared/types";
   observer.observe(document.body, { childList: true, subtree: true });
   refreshTimerPresetsPreference();
   refreshShowBannerPreference();
+  refreshShowBannerTimeLeftPreference();
+  refreshShowBannerVolumePercentagePreference();
   refreshFadeCurvePreference();
   refreshFadeDurationPreference();
   chrome.storage?.onChanged.addListener((changes, areaName) => {
@@ -616,6 +693,32 @@ import type { ContentTimerState, PersistedTimerState } from "../shared/types";
     }
     if (areaName === "local" && changes.showBanner) {
       showBannerEnabled = changes.showBanner.newValue !== false;
+      if (state.isFading) {
+        if (!showBannerEnabled) {
+          document.querySelectorAll(".sf-fading-banner").forEach((b) => b.remove());
+          if (bannerInterval) {
+            clearInterval(bannerInterval);
+            bannerInterval = null;
+          }
+        } else {
+          document.querySelectorAll(".sf-fading-banner").forEach((b) => b.remove());
+          renderFadeBanner();
+        }
+      }
+    }
+    if (areaName === "local" && changes.showBannerTimeLeft) {
+      showBannerTimeLeftEnabled = changes.showBannerTimeLeft.newValue !== false;
+      if (state.isFading && showBannerEnabled) {
+        document.querySelectorAll(".sf-fading-banner").forEach((b) => b.remove());
+        renderFadeBanner();
+      }
+    }
+    if (areaName === "local" && changes.showBannerVolumePercentage) {
+      showBannerVolumePercentageEnabled = changes.showBannerVolumePercentage.newValue !== false;
+      if (state.isFading && showBannerEnabled) {
+        document.querySelectorAll(".sf-fading-banner").forEach((b) => b.remove());
+        renderFadeBanner();
+      }
     }
   });
   waitForPlayer();

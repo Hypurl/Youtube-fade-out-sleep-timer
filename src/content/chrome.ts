@@ -90,6 +90,28 @@ export function getShowBannerPreference(callback: (show: boolean) => void): void
   });
 }
 
+export function getShowBannerTimeLeftPreference(callback: (show: boolean) => void): void {
+  if (!chromeOk()) {
+    callback(true);
+    return;
+  }
+
+  chrome.storage.local.get("showBannerTimeLeft", (data) => {
+    callback(data.showBannerTimeLeft !== false);
+  });
+}
+
+export function getShowBannerVolumePercentagePreference(callback: (show: boolean) => void): void {
+  if (!chromeOk()) {
+    callback(true);
+    return;
+  }
+
+  chrome.storage.local.get("showBannerVolumePercentage", (data) => {
+    callback(data.showBannerVolumePercentage !== false);
+  });
+}
+
 export function getFadeCurvePreference(callback: (config: FadeCurveConfig) => void): void {
   if (!chromeOk()) {
     callback(DEFAULT_FADE_CURVE_CONFIG);

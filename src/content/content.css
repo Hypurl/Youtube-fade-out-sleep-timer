@@ -236,22 +236,59 @@
   left: 50%;
   transform: translateX(-50%);
   pointer-events: auto;
-  background: rgba(26, 50, 99, 0.75);
+  background: rgba(26, 50, 99, 0.5);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   border: none;
-  border-radius: 8px;
-  padding: 8px 14px;
+  border-radius: 7px;
+  padding: 6px 10px;
   font-family: "YouTube Noto", Roboto, Arial, sans-serif;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 500;
   color: #FFC570;
   z-index: 99999;
   /* animation applied via .sf-banner-animate on first spawn only */
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   isolation: isolate;
+}
+.sf-banner-main {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.sf-banner-main:empty {
+  display: none;
+}
+.sf-banner-stat {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 6px;
+  border-radius: 5px;
+  background: rgba(84, 119, 146, 0.11);
+  border: 1px solid rgba(84, 119, 146, 0.22);
+  min-width: 0;
+}
+.sf-banner-stat-icon {
+  font-size: 10px;
+  line-height: 1;
+  color: #6e92ad;
+  opacity: 0.9;
+}
+.sf-banner-stat-value {
+  line-height: 1.2;
+  color: #EFD2B0;
+  font-variant-numeric: tabular-nums;
+}
+.sf-banner-time {
+  font-size: 12px;
+  font-weight: 700;
+}
+.sf-banner-volume-value {
+  font-size: 11px;
+  font-weight: 700;
 }
 .sf-fading-banner::before {
   content: "";
@@ -285,11 +322,11 @@
 }
 .sf-fading-banner button {
   all: unset;
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 600;
   color: #FFC570;
   cursor: pointer;
-  padding: 2px 8px;
+  padding: 2px 6px;
   border-radius: 4px;
   transition: background 0.15s ease;
 }
