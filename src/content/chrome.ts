@@ -1,0 +1,62 @@
+import { MESSAGE_TYPES } from "../shared/constants";
+import type {
+  PersistedTimerState,
+  RuntimeMessage,
+  SetTimerMessage,
+  StartFadeMessage,
+} from "../shared/types";
+
+export function chromeOk(): boolean {
+  try {
+    return !!chrome.runtime?.id;
+  } catch {
+    return false;
+  }
+}
+
+export function sendSetTimer(payload: Omit<SetTimerMessage, "type">): void {
+  if (!chromeOk()) return;
+  const msg: RuntimeMessage = { type: MESSAGE_TYPES.SET_TIMER, ...payload };
+  chrome.runtime.sendMessage(msg);
+}
+
+export function sendCancelTimer(): void {
+  if (!chromeOk()) return;
+  const msg: RuntimeMessage = { type: MESSAGE_TYPES.CANCEL_TIMER };
+  chrome.runtime.sendMessage(msg);
+}
+
+export function getTimerState(
+  callback: (state: PersistedTimerState | { active: false } | undefined) => void,
+): void {
+  if (!chromeOk()) {
+    callback(undefined);
+    return;
+  }
+
+  const msg: RuntimeMessage = { type: MESSAGE_TYPES.GET_TIMER };
+  chrome.runtime.sendMessage(msg, (response) => {
+    callback(response);
+  });
+}
+
+export function onStartFade(handler: () => void): void {
+  if (!chromeOk()) return;
+
+  chrome.runtime.onMessage.addListener((msg: StartFadeMessage) => {
+    if (msg.type === MESSAGE_TYPES.START_FADE) {
+      handler();
+    }
+  });
+}
+
+export function getShowBannerPreference(callback: (show: boolean) => void): void {
+  if (!chromeOk()) {
+    callback(true);
+    return;
+  }
+
+  chrome.storage.local.get("showBanner", (data) => {
+    callback(data.showBanner !== false);
+  });
+}

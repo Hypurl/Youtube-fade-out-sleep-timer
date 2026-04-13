@@ -56,9 +56,9 @@
   display: flex;
   flex-direction: column;
   align-items: stretch;
-  gap: 6px;
+  gap: 3px;
   min-width: 220px;
-  padding: 2px 0;
+  padding: 1px 0;
 }
 
 .sf-slider-value {
@@ -68,6 +68,7 @@
   color: #FFC570;
   font-variant-numeric: tabular-nums;
   line-height: 1.2;
+  margin-bottom: 8px;
 }
 
 .sf-slider-track {
@@ -75,31 +76,14 @@
   width: 100%;
   padding: 0 8px;
   box-sizing: border-box;
-  margin: 4px 0 0;
-}
-.sf-slider-marks {
-  position: absolute;
-  top: 50%;
-  left: 8px;
-  right: 8px;
-  height: 6px;
-  transform: translateY(-50%);
-  pointer-events: none;
-}
-.sf-slider-mark {
-  position: absolute;
-  top: 0;
-  width: 2px;
-  height: 100%;
-  background: rgba(255, 197, 112, 0.3);
-  border-radius: 1px;
-  transform: translateX(-50%);
+  margin: 0;
 }
 .sf-slider {
   -webkit-appearance: none;
   appearance: none;
   width: 100%;
   height: 6px;
+  display: block;
   background: rgba(84, 119, 146, 0.3);
   border-radius: 3px;
   outline: none;
@@ -139,25 +123,56 @@
   border-radius: 3px;
 }
 
-.sf-slider-ticks {
+.sf-presets {
   display: flex;
-  justify-content: space-between;
-  padding: 0 2px;
+  flex-direction: column;
+  gap: 4px;
+  margin: 8px 8px 0;
+}
+
+.sf-presets-label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: #6e92ad;
+  line-height: 1.1;
+}
+
+.sf-presets-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
 }
 .sf-tick {
-  font-size: 13px;
-  color: #547792;
+  all: unset;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-width: 0;
+  height: 24px;
+  padding: 0 4px;
+  box-sizing: border-box;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #87a9c2;
+  background: rgba(84, 119, 146, 0.2);
+  border: 1px solid rgba(84, 119, 146, 0.35);
   cursor: pointer;
-  padding: 2px 0;
-  transition: color 0.12s ease;
+  transition: color 0.12s ease, background 0.12s ease, border-color 0.12s ease;
   user-select: none;
 }
 .sf-tick:hover {
   color: #EFD2B0;
+  background: rgba(84, 119, 146, 0.32);
+  border-color: rgba(132, 169, 194, 0.55);
 }
 .sf-tick.sf--active {
   color: #FFC570;
-  font-weight: 600;
+  background: rgba(255, 197, 112, 0.16);
+  border-color: rgba(255, 197, 112, 0.55);
 }
 
 .sf-start-btn {
@@ -179,7 +194,7 @@
 }
 .sf-slider-panel .sf-start-btn {
   margin-left: 0;
-  margin-top: 2px;
+  margin-top: 4px;
   width: 100%;
   box-sizing: border-box;
 }
