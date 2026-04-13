@@ -23,6 +23,7 @@ const durationPresetContainer = document.getElementById("fadeDurationPresets") a
 const presetContainer = document.getElementById("curvePresets") as HTMLElement;
 const slidersContainer = document.getElementById("curveSliders") as HTMLElement;
 const timerPresetEditor = document.getElementById("timerPresetEditor") as HTMLElement;
+const fullResetBtn = document.getElementById("fullResetBtn") as HTMLButtonElement;
 
 let curveConfig: FadeCurveConfig = { ...DEFAULT_FADE_CURVE_CONFIG };
 let fadeDurationSeconds = DEFAULT_FADE_DURATION_SECONDS;
@@ -55,6 +56,13 @@ function renderTimerPresetEditor(): void {
       saveTimerPresets();
     });
   });
+}
+
+function applyStateToUI(): void {
+  renderTimerPresetEditor();
+  renderFadeDurationPresets();
+  renderPresets();
+  renderSliders();
 }
 
 function saveFadeDuration(): void {
@@ -176,12 +184,36 @@ chrome.storage.local.get(["showBanner", "fadeCurveConfig", "fadeDurationSeconds"
   curveConfig = sanitizeFadeCurveConfig(data.fadeCurveConfig);
   fadeDurationSeconds = sanitizeFadeDurationSeconds(data.fadeDurationSeconds);
   timerPresetMinutes = sanitizeTimerPresetMinutes(data.timerPresetMinutes).slice(0, TIMER_PRESET_COUNT);
-  renderTimerPresetEditor();
-  renderFadeDurationPresets();
-  renderPresets();
-  renderSliders();
+  applyStateToUI();
 });
 
 checkbox.addEventListener("change", () => {
   chrome.storage.local.set({ showBanner: checkbox.checked });
+});
+
+fullResetBtn.addEventListener("click", () => {
+  const confirmed = window.confirm("Reset all Sleep Fade settings to defaults?");
+  if (!confirmed) return;
+
+  checkbox.checked = true;
+  curveConfig = {
+    preset: DEFAULT_FADE_CURVE_CONFIG.preset,
+    customPoints: [...DEFAULT_FADE_CURVE_CONFIG.customPoints],
+    custom2Points: [...DEFAULT_FADE_CURVE_CONFIG.custom2Points],
+  };
+  fadeDurationSeconds = DEFAULT_FADE_DURATION_SECONDS;
+  timerPresetMinutes = [...DEFAULT_TIMER_PRESET_MINUTES];
+
+  chrome.storage.local.set({
+    showBanner: true,
+    fadeCurveConfig: {
+      preset: curveConfig.preset,
+      customPoints: [...curveConfig.customPoints],
+      custom2Points: [...curveConfig.custom2Points],
+    },
+    fadeDurationSeconds,
+    timerPresetMinutes: [...timerPresetMinutes],
+  });
+
+  applyStateToUI();
 });

@@ -24,6 +24,11 @@
       text-transform: uppercase;
       color: #87a9c2;
     }
+    .section-divider {
+      height: 1px;
+      background: rgba(84, 119, 146, 0.3);
+      margin: 12px 0;
+    }
     .setting-row {
       display: flex;
       align-items: center;
@@ -200,6 +205,42 @@
       border-color: rgba(255, 197, 112, 0.75);
       box-shadow: 0 0 0 2px rgba(255, 197, 112, 0.2);
     }
+    .actions-row {
+      margin-top: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+    .actions-note {
+      font-size: 10px;
+      line-height: 1.35;
+      color: #87a9c2;
+      max-width: 185px;
+    }
+    .reset-btn {
+      all: unset;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      height: 28px;
+      padding: 0 10px;
+      border-radius: 6px;
+      color: #f5b6b6;
+      background: rgba(239, 68, 68, 0.12);
+      border: 1px solid rgba(239, 68, 68, 0.35);
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+      cursor: pointer;
+      user-select: none;
+      transition: background 0.14s ease, border-color 0.14s ease, color 0.14s ease;
+    }
+    .reset-btn:hover {
+      color: #ffd2d2;
+      background: rgba(239, 68, 68, 0.2);
+      border-color: rgba(239, 68, 68, 0.5);
+    }
   </style>
 </head>
 <body>
@@ -211,6 +252,8 @@
       <span class="sf-toggle-track" aria-hidden="true"></span>
     </label>
   </div>
+
+  <div class="section-divider" aria-hidden="true"></div>
 
   <div class="section-title">Fade curve</div>
   <div id="curvePresets" class="curve-presets"></div>
@@ -224,12 +267,23 @@
     <div class="hint">Choose Custom to edit the 5-point curve.</div>
   </div>
 
+  <div class="section-divider" aria-hidden="true"></div>
+
   <div class="section-title">Curve duration</div>
   <div id="fadeDurationPresets" class="duration-presets"></div>
+
+  <div class="section-divider" aria-hidden="true"></div>
 
   <div class="section-title">Set timer presets</div>
   <div id="timerPresetEditor" class="timer-presets-editor"></div>
   <div class="hint">Values are in minutes and are auto-sorted.</div>
+
+  <div class="section-divider" aria-hidden="true"></div>
+
+  <div class="actions-row">
+    <div class="actions-note">Restore all settings to default values, including presets and custom curves.</div>
+    <button type="button" id="fullResetBtn" class="reset-btn">Full reset</button>
+  </div>
 
   <script src="./popup.js"></script>
 </body>
