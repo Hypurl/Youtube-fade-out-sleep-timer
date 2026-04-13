@@ -6,13 +6,43 @@ import {
   sanitizeFadeCurveConfig,
   sanitizeFadeCurvePoints,
 } from "../shared/fade";
+import {
+  DEFAULT_FADE_DURATION_SECONDS,
+  FADE_DURATION_PRESETS,
+  sanitizeFadeDurationSeconds,
+} from "../shared/fadeDuration";
 import type { FadeCurveConfig, FadeCurvePresetId } from "../shared/fade";
 
 const checkbox = document.getElementById("showBanner") as HTMLInputElement;
+const durationPresetContainer = document.getElementById("fadeDurationPresets") as HTMLElement;
 const presetContainer = document.getElementById("curvePresets") as HTMLElement;
 const slidersContainer = document.getElementById("curveSliders") as HTMLElement;
 
 let curveConfig: FadeCurveConfig = { ...DEFAULT_FADE_CURVE_CONFIG };
+let fadeDurationSeconds = DEFAULT_FADE_DURATION_SECONDS;
+
+function saveFadeDuration(): void {
+  chrome.storage.local.set({ fadeDurationSeconds });
+}
+
+function renderFadeDurationPresets(): void {
+  durationPresetContainer.innerHTML = FADE_DURATION_PRESETS
+    .map((preset) => {
+      const active = fadeDurationSeconds === preset.seconds ? " active" : "";
+      return `<button type="button" class="curve-preset-btn${active}" data-seconds="${preset.seconds}">${preset.label}</button>`;
+    })
+    .join("");
+
+  durationPresetContainer.querySelectorAll<HTMLButtonElement>(".curve-preset-btn").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const seconds = Number.parseInt(btn.dataset.seconds ?? "0", 10);
+      if (!seconds) return;
+      fadeDurationSeconds = sanitizeFadeDurationSeconds(seconds);
+      renderFadeDurationPresets();
+      saveFadeDuration();
+    });
+  });
+}
 
 function saveCurveConfig(): void {
   chrome.storage.local.set({
@@ -105,9 +135,11 @@ function renderSliders(): void {
   });
 }
 
-chrome.storage.local.get(["showBanner", "fadeCurveConfig"], (data) => {
+chrome.storage.local.get(["showBanner", "fadeCurveConfig", "fadeDurationSeconds"], (data) => {
   checkbox.checked = data.showBanner !== false;
   curveConfig = sanitizeFadeCurveConfig(data.fadeCurveConfig);
+  fadeDurationSeconds = sanitizeFadeDurationSeconds(data.fadeDurationSeconds);
+  renderFadeDurationPresets();
   renderPresets();
   renderSliders();
 });

@@ -1,5 +1,6 @@
 import { MESSAGE_TYPES } from "../shared/constants";
 import { DEFAULT_FADE_CURVE_CONFIG, sanitizeFadeCurveConfig } from "../shared/fade";
+import { DEFAULT_FADE_DURATION_SECONDS, sanitizeFadeDurationSeconds } from "../shared/fadeDuration";
 import type { FadeCurveConfig } from "../shared/fade";
 import type {
   PersistedTimerState,
@@ -71,5 +72,16 @@ export function getFadeCurvePreference(callback: (config: FadeCurveConfig) => vo
 
   chrome.storage.local.get("fadeCurveConfig", (data) => {
     callback(sanitizeFadeCurveConfig(data.fadeCurveConfig));
+  });
+}
+
+export function getFadeDurationPreference(callback: (seconds: number) => void): void {
+  if (!chromeOk()) {
+    callback(DEFAULT_FADE_DURATION_SECONDS);
+    return;
+  }
+
+  chrome.storage.local.get("fadeDurationSeconds", (data) => {
+    callback(sanitizeFadeDurationSeconds(data.fadeDurationSeconds));
   });
 }

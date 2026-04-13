@@ -92,6 +92,11 @@
       grid-template-columns: repeat(3, minmax(0, 1fr));
       gap: 6px;
     }
+    .duration-presets {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 6px;
+    }
     .curve-preset-btn {
       all: unset;
       display: flex;
@@ -188,6 +193,9 @@
     <div id="curveSliders" class="eq-sliders"></div>
     <div class="hint">Choose Custom to edit the 5-point curve.</div>
   </div>
+
+  <div class="section-title">Curve duration</div>
+  <div id="fadeDurationPresets" class="duration-presets"></div>
 
   <script src="./popup.js"></script>
 </body>

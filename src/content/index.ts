@@ -1,6 +1,7 @@
-import { getFadeCurvePreference, getShowBannerPreference, getTimerState, onStartFade, sendCancelTimer, sendSetTimer } from "./chrome";
+import { getFadeCurvePreference, getFadeDurationPreference, getShowBannerPreference, getTimerState, onStartFade, sendCancelTimer, sendSetTimer } from "./chrome";
 import { BED_ICON, SNAP_POINTS } from "./constants";
 import { DEFAULT_FADE_CURVE_CONFIG, evaluateFadeCurve, resolveFadeCurvePoints } from "../shared/fade";
+import { DEFAULT_FADE_DURATION_SECONDS } from "../shared/fadeDuration";
 import {
   activePresetIndex,
   formatDuration,
@@ -21,7 +22,7 @@ import type { ContentTimerState, PersistedTimerState } from "../shared/types";
     panelOpen: false,
     timerActive: false,
     selectedSeconds: 30 * 60,
-    fadeDuration: 300,
+    fadeDuration: DEFAULT_FADE_DURATION_SECONDS,
     fadeCurveConfig: DEFAULT_FADE_CURVE_CONFIG,
     fadeCurvePoints: resolveFadeCurvePoints(DEFAULT_FADE_CURVE_CONFIG),
     endTime: null,
@@ -39,6 +40,14 @@ import type { ContentTimerState, PersistedTimerState } from "../shared/types";
       state.fadeCurveConfig = config;
       if (!state.timerActive) {
         state.fadeCurvePoints = resolveFadeCurvePoints(config);
+      }
+    });
+  }
+
+  function refreshFadeDurationPreference(): void {
+    getFadeDurationPreference((seconds) => {
+      if (!state.timerActive) {
+        state.fadeDuration = seconds;
       }
     });
   }
@@ -452,9 +461,13 @@ import type { ContentTimerState, PersistedTimerState } from "../shared/types";
 
   observer.observe(document.body, { childList: true, subtree: true });
   refreshFadeCurvePreference();
+  refreshFadeDurationPreference();
   chrome.storage?.onChanged.addListener((changes, areaName) => {
     if (areaName === "local" && changes.fadeCurveConfig) {
       refreshFadeCurvePreference();
+    }
+    if (areaName === "local" && changes.fadeDurationSeconds) {
+      refreshFadeDurationPreference();
     }
   });
   waitForPlayer();

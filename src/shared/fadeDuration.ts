@@ -12,7 +12,7 @@ export function sanitizeFadeDurationSeconds(value: unknown): number {
     return DEFAULT_FADE_DURATION_SECONDS;
   }
 
-  let nearest = FADE_DURATION_PRESETS[0].seconds;
+  let nearest: number = FADE_DURATION_PRESETS[0].seconds;
   let nearestDistance = Number.POSITIVE_INFINITY;
 
   for (const preset of FADE_DURATION_PRESETS) {
