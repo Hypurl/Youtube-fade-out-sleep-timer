@@ -106,7 +106,7 @@
   }
 
   function renderSetupPanel(panel, btn) {
-    const presets = [5, 10, 15, 30];
+    const presets = [1, 5, 10, 15, 30];
 
     panel.innerHTML = `
       <div class="sf-row">
