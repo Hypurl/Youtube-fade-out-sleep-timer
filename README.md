@@ -1,27 +1,47 @@
-## BetterSleepTimer
+# BetterSleepTimer
 
-BetterSleepTimer is a Chrome extension for YouTube with a fade-out sleep timer.
+**A Chrome extension that adds a fade-out sleep timer to YouTube.**
 
-## First stable release (v1.0)
+YouTube's native sleep timer cuts the sound off completely. BetterSleepTimer fades it out gradually instead, with a wide range of customization options for fade curves, durations, and timer presets. As far as I know, no other Chrome extension does this — so I built one.
 
-The first stable release is now complete and includes:
+<div align="center">
+<table>
+<tr>
+<td align="center"><b>In-Player Overlay</b></td>
+<td align="center"><b>Fade Curve Editor</b></td>
+<td align="center"><b>Timer Presets</b></td>
+</tr>
+<tr>
+<td align="center"><img src="docs/screenshots/player-popup.png" alt="In-player popup" width="200"></td>
+<td align="center"><img src="docs/screenshots/fade-curve.png" alt="Fade curve editor" width="260"></td>
+<td align="center"><img src="docs/screenshots/timer-presets.png" alt="Timer presets" width="260"></td>
+</tr>
+</table>
+</div>
 
-- Sleep timer with a smooth fade to silence
-- Adjustable fade curve presets plus editable custom curves
-- Adjustable fade duration presets
-- Timer minute preset editor in settings
-- In-player fade banner with cancel control
-- Persistent timer state across navigation/reloads
+## Features
 
-## Upcoming features
+- **Fade curve control** — Linear, Gentle, Abrupt, Early, and two fully editable custom curves
+- **Adjustable fade duration** — 1, 3, 5, or 10 minutes
+- **Quick-access timer presets** — six configurable presets, auto-sorted for fast selection
+- **In-player overlay** — start, adjust, and cancel the timer without leaving fullscreen
+- **Persistent state** — timer survives page navigation and reloads
 
-- End behavior options: pause, mute, pause + mute
-- Keyboard shortcuts
-- Banner position toggles
-- Banner behavior toggles (show only for n seconds)
-- Banner toggle for showing current volume percentage
-- Curve fade volume update interval speed control
+## Installation
 
----
+1. Download the latest release from [Releases](https://github.com/your-repo/releases)
+2. Unzip and go to `chrome://extensions`
+3. Enable **Developer mode** and click **Load unpacked**
+4. Select the extracted folder
 
-If you like to fall asleep to YouTube videos but YouTube’s native timer cuts the sound off completely, this is for you. As far as I know, there are no current Chrome extensions that behave with a fadeout sleep timer. So I built one.
+## Roadmap
+
+- [ ] End behavior options (pause, mute, or both)
+- [ ] Keyboard shortcuts
+- [ ] Banner position and visibility controls
+- [ ] Live volume percentage display
+- [ ] Fade interval speed control
+
+## License
+
+MIT

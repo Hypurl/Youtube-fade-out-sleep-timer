@@ -19,6 +19,9 @@ import {
 import type { FadeCurveConfig, FadeCurvePresetId } from "../shared/fade";
 
 const checkbox = document.getElementById("showBanner") as HTMLInputElement;
+const showBannerTimeLeftCheckbox = document.getElementById("showBannerTimeLeft") as HTMLInputElement;
+const showBannerVolumePercentageCheckbox = document.getElementById("showBannerVolumePercentage") as HTMLInputElement;
+const bannerSubSettings = document.getElementById("bannerSubSettings") as HTMLElement;
 const durationPresetContainer = document.getElementById("fadeDurationPresets") as HTMLElement;
 const presetContainer = document.getElementById("curvePresets") as HTMLElement;
 const slidersContainer = document.getElementById("curveSliders") as HTMLElement;
@@ -28,6 +31,14 @@ const fullResetBtn = document.getElementById("fullResetBtn") as HTMLButtonElemen
 let curveConfig: FadeCurveConfig = { ...DEFAULT_FADE_CURVE_CONFIG };
 let fadeDurationSeconds = DEFAULT_FADE_DURATION_SECONDS;
 let timerPresetMinutes: number[] = [...DEFAULT_TIMER_PRESET_MINUTES];
+
+function syncBannerSubSettingsUI(): void {
+  const expanded = checkbox.checked;
+  bannerSubSettings.classList.toggle("collapsed", !expanded);
+  bannerSubSettings.setAttribute("aria-hidden", String(!expanded));
+  showBannerTimeLeftCheckbox.disabled = !expanded;
+  showBannerVolumePercentageCheckbox.disabled = !expanded;
+}
 
 function renderCurveGuide(): void {
   const sliders = Array.from(slidersContainer.querySelectorAll<HTMLInputElement>(".eq-slider"));
@@ -218,8 +229,18 @@ function renderSliders(): void {
   requestAnimationFrame(() => renderCurveGuide());
 }
 
-chrome.storage.local.get(["showBanner", "fadeCurveConfig", "fadeDurationSeconds", "timerPresetMinutes"], (data) => {
+chrome.storage.local.get([
+  "showBanner",
+  "showBannerTimeLeft",
+  "showBannerVolumePercentage",
+  "fadeCurveConfig",
+  "fadeDurationSeconds",
+  "timerPresetMinutes",
+], (data) => {
   checkbox.checked = data.showBanner !== false;
+  showBannerTimeLeftCheckbox.checked = data.showBannerTimeLeft !== false;
+  showBannerVolumePercentageCheckbox.checked = data.showBannerVolumePercentage !== false;
+  syncBannerSubSettingsUI();
   curveConfig = sanitizeFadeCurveConfig(data.fadeCurveConfig);
   fadeDurationSeconds = sanitizeFadeDurationSeconds(data.fadeDurationSeconds);
   timerPresetMinutes = sanitizeTimerPresetMinutes(data.timerPresetMinutes).slice(0, TIMER_PRESET_COUNT);
@@ -228,6 +249,15 @@ chrome.storage.local.get(["showBanner", "fadeCurveConfig", "fadeDurationSeconds"
 
 checkbox.addEventListener("change", () => {
   chrome.storage.local.set({ showBanner: checkbox.checked });
+  syncBannerSubSettingsUI();
+});
+
+showBannerTimeLeftCheckbox.addEventListener("change", () => {
+  chrome.storage.local.set({ showBannerTimeLeft: showBannerTimeLeftCheckbox.checked });
+});
+
+showBannerVolumePercentageCheckbox.addEventListener("change", () => {
+  chrome.storage.local.set({ showBannerVolumePercentage: showBannerVolumePercentageCheckbox.checked });
 });
 
 fullResetBtn.addEventListener("click", () => {
@@ -235,6 +265,9 @@ fullResetBtn.addEventListener("click", () => {
   if (!confirmed) return;
 
   checkbox.checked = true;
+  showBannerTimeLeftCheckbox.checked = true;
+  showBannerVolumePercentageCheckbox.checked = true;
+  syncBannerSubSettingsUI();
   curveConfig = {
     preset: DEFAULT_FADE_CURVE_CONFIG.preset,
     customPoints: [...DEFAULT_FADE_CURVE_CONFIG.customPoints],
@@ -245,6 +278,8 @@ fullResetBtn.addEventListener("click", () => {
 
   chrome.storage.local.set({
     showBanner: true,
+    showBannerTimeLeft: true,
+    showBannerVolumePercentage: true,
     fadeCurveConfig: {
       preset: curveConfig.preset,
       customPoints: [...curveConfig.customPoints],

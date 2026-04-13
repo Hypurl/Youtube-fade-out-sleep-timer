@@ -40,6 +40,36 @@
       background: rgba(84, 119, 146, 0.12);
       margin-bottom: 4px;
     }
+    .sub-settings {
+      margin: 4px 0 0;
+      padding-left: 14px;
+      border-left: 1px solid rgba(84, 119, 146, 0.35);
+      display: grid;
+      gap: 4px;
+      max-height: 96px;
+      opacity: 1;
+      overflow: hidden;
+      transition: max-height 0.18s ease, opacity 0.14s ease, padding-left 0.14s ease, border-left-color 0.14s ease;
+    }
+    .setting-row.sub {
+      padding: 6px 8px;
+      border-radius: 7px;
+      background: rgba(84, 119, 146, 0.08);
+      border-color: rgba(84, 119, 146, 0.26);
+      margin-bottom: 0;
+    }
+    .setting-row.sub .setting-label {
+      font-size: 11px;
+      font-weight: 500;
+      color: #b7c9d8;
+    }
+    .sub-settings.collapsed {
+      max-height: 0;
+      opacity: 0;
+      padding-left: 0;
+      border-left-color: transparent;
+      pointer-events: none;
+    }
     .setting-label {
       font-size: 12px;
       font-weight: 600;
@@ -278,6 +308,22 @@
       <input type="checkbox" id="showBanner" checked>
       <span class="sf-toggle-track" aria-hidden="true"></span>
     </label>
+  </div>
+  <div id="bannerSubSettings" class="sub-settings">
+    <div class="setting-row sub">
+      <span class="setting-label">Show time left</span>
+      <label class="sf-toggle" aria-label="Show time left">
+        <input type="checkbox" id="showBannerTimeLeft" checked>
+        <span class="sf-toggle-track" aria-hidden="true"></span>
+      </label>
+    </div>
+    <div class="setting-row sub">
+      <span class="setting-label">Show volume percentage</span>
+      <label class="sf-toggle" aria-label="Show volume percentage">
+        <input type="checkbox" id="showBannerVolumePercentage" checked>
+        <span class="sf-toggle-track" aria-hidden="true"></span>
+      </label>
+    </div>
   </div>
 
   <div class="section-divider" aria-hidden="true"></div>
