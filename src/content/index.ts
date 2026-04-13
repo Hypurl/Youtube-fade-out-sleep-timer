@@ -40,6 +40,7 @@ import type { ContentTimerState, PersistedTimerState } from "../shared/types";
   let bannerInterval: ReturnType<typeof setInterval> | null = null;
   let trackedVideo: HTMLVideoElement | null = null;
   let showBannerEnabled = true;
+  let settingVolume = false;
 
   setTimerPresets(DEFAULT_TIMER_PRESETS);
 
@@ -81,6 +82,28 @@ import type { ContentTimerState, PersistedTimerState } from "../shared/types";
     getTimerState((resp) => {
       syncTimerState(resp);
     });
+  }
+
+  function safeSetVolume(video: HTMLVideoElement, vol: number): void {
+    settingVolume = true;
+    video.volume = vol;
+    settingVolume = false;
+  }
+
+  function computeFadedVolume(): number {
+    if (state.fadeStartTime == null || state.endTime == null) return state.originalVolume;
+    const elapsed = Date.now() - state.fadeStartTime;
+    const total = state.endTime - state.fadeStartTime;
+    const t = Math.min(1, elapsed / total);
+    return Math.max(0, state.originalVolume * evaluateFadeCurve(t, state.fadeCurvePoints));
+  }
+
+  function onVolumeChange(): void {
+    if (settingVolume) return;
+    if (!state.isFading) return;
+    const video = getVideo();
+    if (!video) return;
+    safeSetVolume(video, computeFadedVolume());
   }
 
   function getVideo(): HTMLVideoElement | null {
@@ -289,7 +312,7 @@ import type { ContentTimerState, PersistedTimerState } from "../shared/types";
     untrackVideo();
 
     const video = getVideo();
-    if (video && restoreVolume) video.volume = state.originalVolume;
+    if (video && restoreVolume) safeSetVolume(video, state.originalVolume);
 
     if (notifyBackground) {
       sendCancelTimer();
@@ -316,7 +339,7 @@ import type { ContentTimerState, PersistedTimerState } from "../shared/types";
       const elapsed = now - state.fadeStartTime;
       const total = state.endTime - state.fadeStartTime;
       const t = Math.min(1, elapsed / total);
-      video.volume = Math.max(0, state.originalVolume * evaluateFadeCurve(t, state.fadeCurvePoints));
+      safeSetVolume(video, Math.max(0, state.originalVolume * evaluateFadeCurve(t, state.fadeCurvePoints)));
     }
 
     if (video !== trackedVideo) {
@@ -327,14 +350,17 @@ import type { ContentTimerState, PersistedTimerState } from "../shared/types";
   function trackVideo(video: HTMLVideoElement): void {
     if (trackedVideo) {
       trackedVideo.removeEventListener("playing", onVideoPlaying);
+      trackedVideo.removeEventListener("volumechange", onVolumeChange);
     }
     trackedVideo = video;
     trackedVideo.addEventListener("playing", onVideoPlaying);
+    trackedVideo.addEventListener("volumechange", onVolumeChange);
   }
 
   function untrackVideo(): void {
     if (!trackedVideo) return;
     trackedVideo.removeEventListener("playing", onVideoPlaying);
+    trackedVideo.removeEventListener("volumechange", onVolumeChange);
     trackedVideo = null;
   }
 
@@ -372,7 +398,7 @@ import type { ContentTimerState, PersistedTimerState } from "../shared/types";
 
       const video = getVideo();
       if (video) {
-        video.volume = Math.max(0, state.originalVolume * evaluateFadeCurve(t, state.fadeCurvePoints));
+        safeSetVolume(video, Math.max(0, state.originalVolume * evaluateFadeCurve(t, state.fadeCurvePoints)));
       }
 
       const banner = document.querySelector<HTMLElement>(".sf-fading-banner");
@@ -397,7 +423,7 @@ import type { ContentTimerState, PersistedTimerState } from "../shared/types";
 
     const video = getVideo();
     if (video) {
-      video.volume = 0;
+      safeSetVolume(video, 0);
       video.pause();
     }
 
@@ -413,8 +439,10 @@ import type { ContentTimerState, PersistedTimerState } from "../shared/types";
 
     untrackVideo();
 
+    const savedVolume = state.originalVolume;
+    const savedVideo = video;
     setTimeout(() => {
-      if (video) video.volume = state.originalVolume;
+      if (savedVideo) safeSetVolume(savedVideo, savedVolume);
     }, 1000);
 
     if (notifyBackground) {
@@ -428,8 +456,11 @@ import type { ContentTimerState, PersistedTimerState } from "../shared/types";
   }
 
   function showFadeBanner(): void {
-    document.querySelectorAll(".sf-fading-banner").forEach((b) => b.remove());
-    if (!showBannerEnabled || !state.timerActive) return;
+    if (!showBannerEnabled || !state.timerActive) {
+      document.querySelectorAll(".sf-fading-banner").forEach((b) => b.remove());
+      return;
+    }
+    if (document.querySelector(".sf-fading-banner")) return;
     renderFadeBanner();
   }
 
@@ -464,7 +495,7 @@ import type { ContentTimerState, PersistedTimerState } from "../shared/types";
     if (!player) return;
 
     const banner = document.createElement("div");
-    banner.className = "sf-fading-banner";
+    banner.className = "sf-fading-banner sf-banner-animate";
 
     const remaining = Math.max(0, (state.endTime - Date.now()) / 1000);
     banner.innerHTML = `

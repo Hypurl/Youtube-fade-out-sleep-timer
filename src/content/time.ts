@@ -66,10 +66,10 @@ export function sliderToSeconds(value: number): number {
     if (v <= a.position) return a.seconds;
     if (v <= b.position) {
       const t = (v - a.position) / (b.position - a.position);
-      return Math.round(a.seconds + t * (b.seconds - a.seconds));
+      return Math.round((a.seconds + t * (b.seconds - a.seconds)) / 60) * 60;
     }
   }
-  return timerPresets[timerPresets.length - 1].seconds;
+  return Math.round(timerPresets[timerPresets.length - 1].seconds / 60) * 60;
 }
 
 export function nearestPresetIndexFromSlider(sliderVal: number): number {
@@ -102,7 +102,7 @@ export function snapSeconds(seconds: number): number {
   if (distance >= SNAP_RADIUS) return seconds;
 
   const influence = Math.pow(1 - distance / SNAP_RADIUS, 2) * MAX_PULL;
-  return Math.round(seconds + (target - seconds) * influence);
+  return Math.round((seconds + (target - seconds) * influence) / 60) * 60;
 }
 
 export function activePresetIndex(seconds: number): number {

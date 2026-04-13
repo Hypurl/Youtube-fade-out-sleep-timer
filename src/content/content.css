@@ -247,7 +247,7 @@
   font-weight: 500;
   color: #FFC570;
   z-index: 99999;
-  animation: sf-banner-in 0.3s ease-out;
+  /* animation applied via .sf-banner-animate on first spawn only */
   display: flex;
   align-items: center;
   gap: 10px;
@@ -275,6 +275,9 @@
     linear-gradient(#fff 0 0);
   mask-composite: exclude;
   padding: 1.5px;
+}
+.sf-banner-animate {
+  animation: sf-banner-in 0.3s ease-out;
 }
 @keyframes sf-banner-in {
   from { opacity: 0; transform: translateX(-50%) translateY(-8px); }
