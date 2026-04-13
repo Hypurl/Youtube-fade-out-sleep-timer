@@ -5,8 +5,8 @@
   "scripts": {
     "clean": "rm -rf dist",
     "copy": "cp src/manifest.json dist/ && cp -r icons dist/ && cp src/content/content.css dist/content/ && cp src/popup/popup.html dist/popup/",
-    "build": "npm run clean && tsc && npm run copy",
-    "dev": "npm run build && tsc --watch"
+    "build": "npm run clean && npx tsc && npm run copy",
+    "dev": "npm run build && npx tsc --watch"
   },
   "devDependencies": {
     "@types/chrome": "^0.0.287",
