@@ -296,10 +296,11 @@
       const volumeMultiplier = fadeCurve(t);
       video.volume = Math.max(0, state.originalVolume * volumeMultiplier);
 
-      const bannerTime = document.querySelector(".sf-banner-time");
-      if (bannerTime) {
+      const banner = document.querySelector(".sf-fading-banner");
+      if (banner) {
         const remaining = Math.max(0, (state.endTime - now) / 1000);
-        bannerTime.textContent = formatTime(remaining);
+        banner.querySelector(".sf-banner-time").textContent = formatTime(remaining);
+        banner.style.setProperty("--progress", Math.max(0, 1 - t));
       }
     }, 500);
   }
