@@ -1,8 +1,8 @@
-import { getShowBannerPreference, getTimerState, onStartFade, sendCancelTimer, sendSetTimer } from "./chrome";
+import { getFadeCurvePreference, getShowBannerPreference, getTimerState, onStartFade, sendCancelTimer, sendSetTimer } from "./chrome";
 import { BED_ICON, SNAP_POINTS } from "./constants";
+import { DEFAULT_FADE_CURVE_CONFIG, evaluateFadeCurve, resolveFadeCurvePoints } from "../shared/fade";
 import {
   activePresetIndex,
-  fadeCurve,
   formatDuration,
   formatTime,
   secondsToSlider,
@@ -22,6 +22,8 @@ import type { ContentTimerState, PersistedTimerState } from "../shared/types";
     timerActive: false,
     selectedSeconds: 30 * 60,
     fadeDuration: 300,
+    fadeCurveConfig: DEFAULT_FADE_CURVE_CONFIG,
+    fadeCurvePoints: resolveFadeCurvePoints(DEFAULT_FADE_CURVE_CONFIG),
     endTime: null,
     fadeStartTime: null,
     originalVolume: 1,
@@ -31,6 +33,15 @@ import type { ContentTimerState, PersistedTimerState } from "../shared/types";
   let fadeInterval: ReturnType<typeof setInterval> | null = null;
   let tickInterval: ReturnType<typeof setInterval> | null = null;
   let trackedVideo: HTMLVideoElement | null = null;
+
+  function refreshFadeCurvePreference(): void {
+    getFadeCurvePreference((config) => {
+      state.fadeCurveConfig = config;
+      if (!state.timerActive) {
+        state.fadeCurvePoints = resolveFadeCurvePoints(config);
+      }
+    });
+  }
 
   function getVideo(): HTMLVideoElement | null {
     return document.querySelector<HTMLVideoElement>("video.html5-main-video")
@@ -205,6 +216,7 @@ import type { ContentTimerState, PersistedTimerState } from "../shared/types";
       seconds: state.selectedSeconds,
       fadeDuration: state.fadeDuration,
       originalVolume: state.originalVolume,
+      fadeCurvePoints: [...state.fadeCurvePoints],
     });
 
     btn.classList.add("sf--active");
@@ -250,7 +262,7 @@ import type { ContentTimerState, PersistedTimerState } from "../shared/types";
       const elapsed = now - state.fadeStartTime;
       const total = state.endTime - state.fadeStartTime;
       const t = Math.min(1, elapsed / total);
-      video.volume = Math.max(0, state.originalVolume * fadeCurve(t));
+      video.volume = Math.max(0, state.originalVolume * evaluateFadeCurve(t, state.fadeCurvePoints));
     }
 
     if (video !== trackedVideo) {
@@ -306,7 +318,7 @@ import type { ContentTimerState, PersistedTimerState } from "../shared/types";
       const total = state.endTime - state.fadeStartTime;
       const t = Math.min(1, elapsed / total);
 
-      video.volume = Math.max(0, state.originalVolume * fadeCurve(t));
+      video.volume = Math.max(0, state.originalVolume * evaluateFadeCurve(t, state.fadeCurvePoints));
 
       const banner = document.querySelector<HTMLElement>(".sf-fading-banner");
       const timeLabel = banner?.querySelector<HTMLElement>(".sf-banner-time");
@@ -393,6 +405,9 @@ import type { ContentTimerState, PersistedTimerState } from "../shared/types";
     state.fadeStartTime = resp.fadeStartTime;
     state.fadeDuration = resp.fadeDuration;
     state.originalVolume = resp.originalVolume;
+    state.fadeCurvePoints = Array.isArray(resp.fadeCurvePoints) && resp.fadeCurvePoints.length === 5
+      ? resp.fadeCurvePoints
+      : resolveFadeCurvePoints(state.fadeCurveConfig);
 
     const btn = document.querySelector<HTMLElement>(".sf-player-btn");
     if (btn) btn.classList.add("sf--active");
@@ -436,5 +451,11 @@ import type { ContentTimerState, PersistedTimerState } from "../shared/types";
   });
 
   observer.observe(document.body, { childList: true, subtree: true });
+  refreshFadeCurvePreference();
+  chrome.storage?.onChanged.addListener((changes, areaName) => {
+    if (areaName === "local" && changes.fadeCurveConfig) {
+      refreshFadeCurvePreference();
+    }
+  });
   waitForPlayer();
 })();

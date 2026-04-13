@@ -31,6 +31,7 @@ chrome.runtime.onMessage.addListener((msg: RuntimeMessage, _sender, sendResponse
       fadeStartTime: Date.now() + delaySeconds * 1000,
       fadeDuration: msg.fadeDuration,
       originalVolume: msg.originalVolume,
+      fadeCurvePoints: msg.fadeCurvePoints,
       active: true,
     };
 

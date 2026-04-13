@@ -1,4 +1,6 @@
 import { MESSAGE_TYPES } from "../shared/constants";
+import { DEFAULT_FADE_CURVE_CONFIG, sanitizeFadeCurveConfig } from "../shared/fade";
+import type { FadeCurveConfig } from "../shared/fade";
 import type {
   PersistedTimerState,
   RuntimeMessage,
@@ -58,5 +60,16 @@ export function getShowBannerPreference(callback: (show: boolean) => void): void
 
   chrome.storage.local.get("showBanner", (data) => {
     callback(data.showBanner !== false);
+  });
+}
+
+export function getFadeCurvePreference(callback: (config: FadeCurveConfig) => void): void {
+  if (!chromeOk()) {
+    callback(DEFAULT_FADE_CURVE_CONFIG);
+    return;
+  }
+
+  chrome.storage.local.get("fadeCurveConfig", (data) => {
+    callback(sanitizeFadeCurveConfig(data.fadeCurveConfig));
   });
 }

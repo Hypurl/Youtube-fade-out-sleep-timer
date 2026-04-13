@@ -1,10 +1,12 @@
 import type { MESSAGE_TYPES } from "./constants";
+import type { FadeCurveConfig } from "./fade";
 
 export interface PersistedTimerState {
   endTime: number;
   fadeStartTime: number;
   fadeDuration: number;
   originalVolume: number;
+  fadeCurvePoints?: number[];
   active: boolean;
 }
 
@@ -13,6 +15,8 @@ export interface ContentTimerState {
   timerActive: boolean;
   selectedSeconds: number;
   fadeDuration: number;
+  fadeCurveConfig: FadeCurveConfig;
+  fadeCurvePoints: number[];
   endTime: number | null;
   fadeStartTime: number | null;
   originalVolume: number;
@@ -24,6 +28,7 @@ export interface SetTimerMessage {
   seconds: number;
   fadeDuration: number;
   originalVolume: number;
+  fadeCurvePoints: number[];
 }
 
 export interface CancelTimerMessage {

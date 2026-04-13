@@ -3,7 +3,7 @@
 <head>
   <style>
     body {
-      width: 200px;
+      width: 300px;
       padding: 12px;
       font-family: "Segoe UI", Roboto, Arial, sans-serif;
       font-size: 13px;
@@ -16,25 +16,179 @@
       font-size: 14px;
       color: #FFC570;
     }
-    label {
+    .section-title {
+      margin: 14px 0 6px;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: #87a9c2;
+    }
+    .setting-row {
       display: flex;
       align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 8px 10px;
+      border-radius: 8px;
+      border: 1px solid rgba(84, 119, 146, 0.35);
+      background: rgba(84, 119, 146, 0.12);
+      margin-bottom: 4px;
+    }
+    .setting-label {
+      font-size: 12px;
+      font-weight: 600;
+      color: #EFD2B0;
+    }
+    .sf-toggle {
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+      cursor: pointer;
+      user-select: none;
+    }
+    .sf-toggle input {
+      position: absolute;
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+    .sf-toggle-track {
+      width: 36px;
+      height: 20px;
+      border-radius: 999px;
+      background: rgba(84, 119, 146, 0.45);
+      border: 1px solid rgba(84, 119, 146, 0.75);
+      transition: background 0.16s ease, border-color 0.16s ease;
+      position: relative;
+      box-sizing: border-box;
+    }
+    .sf-toggle-track::after {
+      content: "";
+      position: absolute;
+      top: 1px;
+      left: 1px;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: #d6dce4;
+      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
+      transition: transform 0.16s ease, background 0.16s ease;
+    }
+    .sf-toggle input:checked + .sf-toggle-track {
+      background: rgba(255, 197, 112, 0.28);
+      border-color: rgba(255, 197, 112, 0.75);
+    }
+    .sf-toggle input:checked + .sf-toggle-track::after {
+      transform: translateX(16px);
+      background: #FFC570;
+    }
+    .sf-toggle input:focus-visible + .sf-toggle-track {
+      outline: 2px solid rgba(255, 197, 112, 0.6);
+      outline-offset: 2px;
+    }
+    .curve-presets {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 6px;
+    }
+    .curve-preset-btn {
+      all: unset;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 24px;
+      border-radius: 6px;
+      color: #87a9c2;
+      background: rgba(84, 119, 146, 0.2);
+      border: 1px solid rgba(84, 119, 146, 0.35);
+      font-size: 11px;
+      font-weight: 600;
+      cursor: pointer;
+      user-select: none;
+    }
+    .curve-preset-btn:hover {
+      color: #EFD2B0;
+      border-color: rgba(132, 169, 194, 0.55);
+    }
+    .curve-preset-btn.active {
+      color: #FFC570;
+      background: rgba(255, 197, 112, 0.16);
+      border-color: rgba(255, 197, 112, 0.55);
+    }
+    .curve-editor {
+      margin-top: 8px;
+      padding: 8px;
+      border-radius: 8px;
+      border: 1px solid rgba(84, 119, 146, 0.35);
+      background: rgba(84, 119, 146, 0.12);
+    }
+    .curve-label-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 10px;
+      color: #87a9c2;
+      margin-bottom: 6px;
+    }
+    .eq-sliders {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
       gap: 8px;
+      align-items: end;
+    }
+    .eq-col {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+    }
+    .eq-slider {
+      writing-mode: vertical-lr;
+      direction: rtl;
+      width: 22px;
+      height: 90px;
+      accent-color: #FFC570;
       cursor: pointer;
     }
-    input[type="checkbox"] {
-      accent-color: #FFC570;
-      width: 14px;
-      height: 14px;
+    .eq-slider:disabled {
+      opacity: 0.45;
+      cursor: default;
+    }
+    .eq-value {
+      min-width: 32px;
+      text-align: center;
+      font-size: 10px;
+      color: #EFD2B0;
+    }
+    .hint {
+      margin-top: 6px;
+      font-size: 10px;
+      color: #87a9c2;
     }
   </style>
 </head>
 <body>
   <h3>Sleep Fade</h3>
-  <label>
-    <input type="checkbox" id="showBanner" checked>
-    Show banner
-  </label>
+  <div class="setting-row">
+    <span class="setting-label">Show banner</span>
+    <label class="sf-toggle" aria-label="Show banner">
+      <input type="checkbox" id="showBanner" checked>
+      <span class="sf-toggle-track" aria-hidden="true"></span>
+    </label>
+  </div>
+
+  <div class="section-title">Fade curve</div>
+  <div id="curvePresets" class="curve-presets"></div>
+
+  <div class="curve-editor">
+    <div class="curve-label-row">
+      <span>Start (100%)</span>
+      <span>End (0%)</span>
+    </div>
+    <div id="curveSliders" class="eq-sliders"></div>
+    <div class="hint">Choose Custom to edit the 5-point curve.</div>
+  </div>
+
   <script src="./popup.js"></script>
 </body>
 </html>
