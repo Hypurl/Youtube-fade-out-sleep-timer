@@ -102,12 +102,15 @@ import type { ContentTimerState, PersistedTimerState } from "../shared/types";
   function renderSetupPanel(panel: HTMLElement, btn: HTMLElement): void {
     const sliderVal = secondsToSlider(state.selectedSeconds);
     const activeIdx = activePresetIndex(state.selectedSeconds);
+    const sliderMin = Math.min(...SNAP_POINTS.map((p) => p.position));
+    const sliderMax = Math.max(...SNAP_POINTS.map((p) => p.position));
+    const sliderStep = Math.max(0.000001, (sliderMax - sliderMin) / 1000);
 
     panel.innerHTML = `
       <div class="sf-slider-panel">
         <div class="sf-slider-value">${formatDuration(state.selectedSeconds)}</div>
         <div class="sf-slider-track">
-          <input type="range" class="sf-slider" min="0" max="1" step="0.001" value="${sliderVal}" />
+          <input type="range" class="sf-slider" min="${sliderMin}" max="${sliderMax}" step="${sliderStep}" value="${sliderVal}" />
         </div>
         <div class="sf-presets">
           <div class="sf-presets-label">Presets</div>

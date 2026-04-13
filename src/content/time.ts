@@ -1,5 +1,9 @@
 import { SNAP_POINTS } from "./constants";
 
+const SLIDER_MIN = Math.min(...SNAP_POINTS.map((p) => p.position));
+const SLIDER_MAX = Math.max(...SNAP_POINTS.map((p) => p.position));
+const SLIDER_SPAN = Math.max(0.000001, SLIDER_MAX - SLIDER_MIN);
+
 export function formatTime(seconds: number): string {
   const s = Math.max(0, Math.round(seconds));
   const m = Math.floor(s / 60);
@@ -38,7 +42,7 @@ export function secondsToSlider(seconds: number): number {
 }
 
 export function sliderToSeconds(value: number): number {
-  const v = Math.max(0, Math.min(1, value));
+  const v = Math.max(SLIDER_MIN, Math.min(SLIDER_MAX, value));
   for (let i = 0; i < SNAP_POINTS.length - 1; i++) {
     const a = SNAP_POINTS[i], b = SNAP_POINTS[i + 1];
     if (v <= a.position) return a.seconds;
@@ -73,7 +77,7 @@ export function snapSeconds(seconds: number): number {
   const sliderVal = secondsToSlider(seconds);
   const nearest = nearestPresetIndexFromSlider(sliderVal);
 
-  const distance = Math.abs(sliderVal - SNAP_POINTS[nearest].position);
+  const distance = Math.abs(sliderVal - SNAP_POINTS[nearest].position) / SLIDER_SPAN;
   const target = SNAP_POINTS[nearest].seconds;
 
   if (distance <= HARD_LOCK_RADIUS) return target;
@@ -87,5 +91,6 @@ export function activePresetIndex(seconds: number): number {
   const ACTIVE_RADIUS = 0.012;
   const sliderVal = secondsToSlider(seconds);
   const nearest = nearestPresetIndexFromSlider(sliderVal);
-  return Math.abs(sliderVal - SNAP_POINTS[nearest].position) <= ACTIVE_RADIUS ? nearest : -1;
+  const distance = Math.abs(sliderVal - SNAP_POINTS[nearest].position) / SLIDER_SPAN;
+  return distance <= ACTIVE_RADIUS ? nearest : -1;
 }
