@@ -1,0 +1,18 @@
+{
+  "name": "better-sleep-timer",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "clean": "rm -rf dist",
+    "copy": "cp src/manifest.json dist/ && cp -r icons dist/ && cp src/content/content.css dist/content/ && cp src/popup/popup.html dist/popup/",
+    "typecheck": "npx tsc --noEmit",
+    "bundle": "npx esbuild src/background/index.ts --bundle --format=iife --target=es2020 --outfile=dist/background/index.js && npx esbuild src/content/index.ts --bundle --format=iife --target=es2020 --outfile=dist/content/index.js && npx esbuild src/popup/popup.ts --bundle --format=iife --target=es2020 --outfile=dist/popup/popup.js",
+    "build": "npm run clean && npm run typecheck && npm run bundle && npm run copy",
+    "dev": "npm run build"
+  },
+  "devDependencies": {
+    "@types/chrome": "^0.0.287",
+    "esbuild": "^0.25.11",
+    "typescript": "^5.7.0"
+  }
+}

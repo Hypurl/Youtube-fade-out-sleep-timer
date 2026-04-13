@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <style>
+    body {
+      width: 300px;
+      padding: 12px;
+      font-family: "Segoe UI", Roboto, Arial, sans-serif;
+      font-size: 13px;
+      color: #EFD2B0;
+      background: #1A3263;
+      margin: 0;
+    }
+    h3 {
+      margin: 0 0 10px;
+      font-size: 14px;
+      color: #FFC570;
+    }
+    .section-title {
+      margin: 14px 0 6px;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: #87a9c2;
+    }
+    .section-divider {
+      height: 1px;
+      background: rgba(84, 119, 146, 0.3);
+      margin: 12px 0;
+    }
+    .setting-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 8px 10px;
+      border-radius: 8px;
+      border: 1px solid rgba(84, 119, 146, 0.35);
+      background: rgba(84, 119, 146, 0.12);
+      margin-bottom: 4px;
+    }
+    .setting-label {
+      font-size: 12px;
+      font-weight: 600;
+      color: #EFD2B0;
+    }
+    .sf-toggle {
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+      cursor: pointer;
+      user-select: none;
+    }
+    .sf-toggle input {
+      position: absolute;
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+    .sf-toggle-track {
+      width: 36px;
+      height: 20px;
+      border-radius: 999px;
+      background: rgba(84, 119, 146, 0.45);
+      border: 1px solid rgba(84, 119, 146, 0.75);
+      transition: background 0.16s ease, border-color 0.16s ease;
+      position: relative;
+      box-sizing: border-box;
+    }
+    .sf-toggle-track::after {
+      content: "";
+      position: absolute;
+      top: 1px;
+      left: 1px;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: #d6dce4;
+      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
+      transition: transform 0.16s ease, background 0.16s ease;
+    }
+    .sf-toggle input:checked + .sf-toggle-track {
+      background: rgba(255, 197, 112, 0.28);
+      border-color: rgba(255, 197, 112, 0.75);
+    }
+    .sf-toggle input:checked + .sf-toggle-track::after {
+      transform: translateX(16px);
+      background: #FFC570;
+    }
+    .sf-toggle input:focus-visible + .sf-toggle-track {
+      outline: 2px solid rgba(255, 197, 112, 0.6);
+      outline-offset: 2px;
+    }
+    .curve-presets {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 6px;
+    }
+    .duration-presets {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 6px;
+    }
+    .curve-preset-btn {
+      all: unset;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 24px;
+      border-radius: 6px;
+      color: #87a9c2;
+      background: rgba(84, 119, 146, 0.2);
+      border: 1px solid rgba(84, 119, 146, 0.35);
+      font-size: 11px;
+      font-weight: 600;
+      cursor: pointer;
+      user-select: none;
+    }
+    .curve-preset-btn:hover {
+      color: #EFD2B0;
+      border-color: rgba(132, 169, 194, 0.55);
+    }
+    .curve-preset-btn.active {
+      color: #FFC570;
+      background: rgba(255, 197, 112, 0.16);
+      border-color: rgba(255, 197, 112, 0.55);
+    }
+    .curve-editor {
+      margin-top: 8px;
+      padding: 8px;
+      border-radius: 8px;
+      border: 1px solid rgba(84, 119, 146, 0.35);
+      background: rgba(84, 119, 146, 0.12);
+    }
+    .curve-label-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 10px;
+      color: #87a9c2;
+      margin-bottom: 6px;
+    }
+    .eq-sliders {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 8px;
+      align-items: end;
+      position: relative;
+      isolation: isolate;
+      min-height: 124px;
+    }
+    .curve-guide {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 0;
+      overflow: visible;
+    }
+    .curve-guide polyline {
+      fill: none;
+      stroke: rgba(255, 197, 112, 0.85);
+      stroke-width: 2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      filter: drop-shadow(0 0 4px rgba(255, 197, 112, 0.35));
+    }
+    .curve-guide circle {
+      fill: #FFC570;
+      stroke: rgba(26, 50, 99, 0.9);
+      stroke-width: 1.5;
+    }
+    .eq-col {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      position: relative;
+      z-index: 1;
+    }
+    .eq-slider {
+      writing-mode: vertical-lr;
+      direction: rtl;
+      width: 22px;
+      height: 90px;
+      accent-color: #FFC570;
+      cursor: pointer;
+    }
+    .eq-slider:disabled {
+      opacity: 0.45;
+      cursor: default;
+    }
+    .eq-value {
+      min-width: 32px;
+      text-align: center;
+      font-size: 10px;
+      color: #EFD2B0;
+    }
+    .hint {
+      margin-top: 6px;
+      font-size: 10px;
+      color: #87a9c2;
+    }
+    .timer-presets-editor {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 6px;
+    }
+    .timer-preset-item {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .timer-preset-item label {
+      font-size: 10px;
+      color: #87a9c2;
+    }
+    .timer-preset-item input {
+      width: 100%;
+      box-sizing: border-box;
+      border: 1px solid rgba(84, 119, 146, 0.55);
+      background: rgba(84, 119, 146, 0.14);
+      color: #EFD2B0;
+      border-radius: 6px;
+      height: 26px;
+      padding: 0 8px;
+      font-size: 12px;
+      outline: none;
+    }
+    .timer-preset-item input:focus {
+      border-color: rgba(255, 197, 112, 0.75);
+      box-shadow: 0 0 0 2px rgba(255, 197, 112, 0.2);
+    }
+    .actions-row {
+      margin-top: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+    .actions-note {
+      font-size: 10px;
+      line-height: 1.35;
+      color: #87a9c2;
+      max-width: 185px;
+    }
+    .reset-btn {
+      all: unset;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      height: 28px;
+      padding: 0 10px;
+      border-radius: 6px;
+      color: #f5b6b6;
+      background: rgba(239, 68, 68, 0.12);
+      border: 1px solid rgba(239, 68, 68, 0.35);
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+      cursor: pointer;
+      user-select: none;
+      transition: background 0.14s ease, border-color 0.14s ease, color 0.14s ease;
+    }
+    .reset-btn:hover {
+      color: #ffd2d2;
+      background: rgba(239, 68, 68, 0.2);
+      border-color: rgba(239, 68, 68, 0.5);
+    }
+  </style>
+</head>
+<body>
+  <h3>BetterSleepTimer</h3>
+  <div class="setting-row">
+    <span class="setting-label">Show banner</span>
+    <label class="sf-toggle" aria-label="Show banner">
+      <input type="checkbox" id="showBanner" checked>
+      <span class="sf-toggle-track" aria-hidden="true"></span>
+    </label>
+  </div>
+
+  <div class="section-divider" aria-hidden="true"></div>
+
+  <div class="section-title">Fade curve</div>
+  <div id="curvePresets" class="curve-presets"></div>
+
+  <div class="curve-editor">
+    <div class="curve-label-row">
+      <span>Start (100%)</span>
+      <span>End (0%)</span>
+    </div>
+    <div id="curveSliders" class="eq-sliders"></div>
+    <div class="hint">Choose Custom to edit the 5-point curve.</div>
+  </div>
+
+  <div class="section-divider" aria-hidden="true"></div>
+
+  <div class="section-title">Curve duration</div>
+  <div id="fadeDurationPresets" class="duration-presets"></div>
+
+  <div class="section-divider" aria-hidden="true"></div>
+
+  <div class="section-title">Set timer presets</div>
+  <div id="timerPresetEditor" class="timer-presets-editor"></div>
+  <div class="hint">Values are in minutes and are auto-sorted.</div>
+
+  <div class="section-divider" aria-hidden="true"></div>
+
+  <div class="actions-row">
+    <div class="actions-note">Restore all settings to default values, including presets and custom curves.</div>
+    <button type="button" id="fullResetBtn" class="reset-btn">Full reset</button>
+  </div>
+
+  <script src="./popup.js"></script>
+</body>
+</html>
