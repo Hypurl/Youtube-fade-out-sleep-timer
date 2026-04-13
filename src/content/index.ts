@@ -121,33 +121,100 @@
     btn.appendChild(panel);
   }
 
+  const SNAP_POINTS = [
+    { label: "5m", seconds: 300 },
+    { label: "10m", seconds: 600 },
+    { label: "15m", seconds: 900 },
+    { label: "30m", seconds: 1800 },
+    { label: "45m", seconds: 2700 },
+    { label: "1h", seconds: 3600 },
+    { label: "1.5h", seconds: 5400 },
+    { label: "2h", seconds: 7200 },
+  ];
+
+  function secondsToSlider(seconds: number): number {
+    for (let i = 0; i < SNAP_POINTS.length - 1; i++) {
+      const a = SNAP_POINTS[i], b = SNAP_POINTS[i + 1];
+      if (seconds <= a.seconds) return i;
+      if (seconds <= b.seconds) {
+        const t = (seconds - a.seconds) / (b.seconds - a.seconds);
+        return i + t;
+      }
+    }
+    return SNAP_POINTS.length - 1;
+  }
+
+  function sliderToSeconds(value: number): number {
+    const i = Math.floor(value);
+    if (i >= SNAP_POINTS.length - 1) return SNAP_POINTS[SNAP_POINTS.length - 1].seconds;
+    const t = value - i;
+    return Math.round(SNAP_POINTS[i].seconds + t * (SNAP_POINTS[i + 1].seconds - SNAP_POINTS[i].seconds));
+  }
+
+  function snapSeconds(seconds: number): number {
+    const SNAP_THRESHOLD = 0.15;
+    const sliderVal = secondsToSlider(seconds);
+    const nearest = Math.round(sliderVal);
+    if (nearest >= 0 && nearest < SNAP_POINTS.length && Math.abs(sliderVal - nearest) < SNAP_THRESHOLD) {
+      return SNAP_POINTS[nearest].seconds;
+    }
+    return seconds;
+  }
+
+  function formatDuration(seconds: number): string {
+    if (seconds >= 3600) {
+      const h = Math.floor(seconds / 3600);
+      const m = Math.round((seconds % 3600) / 60);
+      return m > 0 ? `${h}h ${m}m` : `${h}h`;
+    }
+    return `${Math.round(seconds / 60)}m`;
+  }
+
   function renderSetupPanel(panel: HTMLElement, btn: HTMLElement): void {
-    const presets = [
-      { label: "5s", seconds: 5 },
-      { label: "1", seconds: 60 },
-      { label: "5", seconds: 300 },
-      { label: "10", seconds: 600 },
-      { label: "15", seconds: 900 },
-      { label: "30", seconds: 1800 },
-    ];
+    const sliderVal = secondsToSlider(state.selectedSeconds);
+    const max = SNAP_POINTS.length - 1;
 
     panel.innerHTML = `
-      <div class="sf-row">
-        ${presets
-          .map(
-            (p) =>
-              `<button class="sf-preset-btn ${state.selectedSeconds === p.seconds ? "sf--selected" : ""}" data-sec="${p.seconds}">${p.label}</button>`
-          )
-          .join("")}
+      <div class="sf-slider-panel">
+        <div class="sf-slider-value">${formatDuration(state.selectedSeconds)}</div>
+        <div class="sf-slider-track">
+          <div class="sf-slider-marks">
+            ${SNAP_POINTS.map((_, i) =>
+              `<span class="sf-slider-mark" style="left:${(i / max) * 100}%"></span>`
+            ).join("")}
+          </div>
+          <input type="range" class="sf-slider" min="0" max="${max}" step="any" value="${sliderVal}" />
+        </div>
+        <div class="sf-slider-ticks">
+          ${SNAP_POINTS.map((p, i) =>
+            `<span class="sf-tick${i === Math.round(sliderVal) ? " sf--active" : ""}" data-idx="${i}">${p.label}</span>`
+          ).join("")}
+        </div>
         <button class="sf-start-btn">Start</button>
       </div>
     `;
 
-    panel.querySelectorAll<HTMLButtonElement>(".sf-preset-btn").forEach((b) => {
-      b.addEventListener("click", () => {
-        state.selectedSeconds = parseInt(b.dataset.sec!);
-        panel.querySelectorAll(".sf-preset-btn").forEach((x) => x.classList.remove("sf--selected"));
-        b.classList.add("sf--selected");
+    const slider = panel.querySelector<HTMLInputElement>(".sf-slider")!;
+    const valueDisplay = panel.querySelector<HTMLElement>(".sf-slider-value")!;
+    const ticks = panel.querySelectorAll<HTMLElement>(".sf-tick");
+
+    function updateFromSlider() {
+      const raw = sliderToSeconds(parseFloat(slider.value));
+      state.selectedSeconds = snapSeconds(raw);
+      valueDisplay.textContent = formatDuration(state.selectedSeconds);
+      const activeIdx = Math.round(parseFloat(slider.value));
+      ticks.forEach((t, i) => t.classList.toggle("sf--active", i === activeIdx && Math.abs(parseFloat(slider.value) - activeIdx) < 0.15));
+    }
+
+    slider.addEventListener("input", updateFromSlider);
+
+    ticks.forEach((t) => {
+      t.addEventListener("click", () => {
+        const idx = parseInt(t.dataset.idx!);
+        slider.value = String(idx);
+        state.selectedSeconds = SNAP_POINTS[idx].seconds;
+        valueDisplay.textContent = formatDuration(state.selectedSeconds);
+        ticks.forEach((x, i) => x.classList.toggle("sf--active", i === idx));
       });
     });
 
