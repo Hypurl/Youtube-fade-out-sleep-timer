@@ -14,7 +14,8 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
 
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   if (msg.type === "SET_TIMER") {
-    const delayMinutes = Math.max(0, msg.minutes - msg.fadeDuration / 60);
+    const delaySeconds = Math.max(0, msg.seconds - msg.fadeDuration);
+    const delayMinutes = delaySeconds / 60;
 
     chrome.alarms.clear("sleep-fade-start");
     chrome.alarms.create("sleep-fade-start", {
@@ -22,8 +23,8 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     });
     chrome.storage.local.set({
       timerState: {
-        endTime: Date.now() + msg.minutes * 60 * 1000,
-        fadeStartTime: Date.now() + delayMinutes * 60 * 1000,
+        endTime: Date.now() + msg.seconds * 1000,
+        fadeStartTime: Date.now() + delaySeconds * 1000,
         fadeDuration: msg.fadeDuration,
         originalVolume: msg.originalVolume,
         active: true,

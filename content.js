@@ -108,8 +108,6 @@
 
   function renderSetupPanel(panel, btn) {
     const presets = [
-      { label: "5s", seconds: 5 },
-      { label: "1", seconds: 60 },
       { label: "5", seconds: 300 },
       { label: "10", seconds: 600 },
       { label: "15", seconds: 900 },
@@ -209,6 +207,8 @@
     fadeInterval = null;
     tickInterval = null;
 
+    untrackVideo();
+
     const video = getVideo();
     if (video) video.volume = state.originalVolume;
 
@@ -220,8 +220,50 @@
     document.querySelectorAll(".sf-fading-banner").forEach((b) => b.remove());
   }
 
+  function onVideoPlaying() {
+    if (!state.timerActive) return;
+    const video = getVideo();
+    if (!video) return;
+
+    if (state.isFading) {
+      // Re-apply current fade volume to the new/restarted video
+      const now = Date.now();
+      const elapsed = now - state.fadeStartTime;
+      const total = state.endTime - state.fadeStartTime;
+      const t = Math.min(1, elapsed / total);
+      video.volume = Math.max(0, state.originalVolume * fadeCurve(t));
+    }
+
+    if (video !== trackedVideo) {
+      trackVideo(video);
+    }
+  }
+
+  function trackVideo(video) {
+    if (trackedVideo) {
+      trackedVideo.removeEventListener("playing", onVideoPlaying);
+    }
+    trackedVideo = video;
+    video.addEventListener("playing", onVideoPlaying);
+  }
+
+  function untrackVideo() {
+    if (trackedVideo) {
+      trackedVideo.removeEventListener("playing", onVideoPlaying);
+      trackedVideo = null;
+    }
+  }
+
   function tick() {
     if (!state.timerActive) return;
+
+    const video = getVideo();
+    if (video && video !== trackedVideo) {
+      trackVideo(video);
+      if (state.isFading) {
+        onVideoPlaying();
+      }
+    }
 
     const now = Date.now();
 
@@ -271,6 +313,8 @@
     state.isFading = false;
     clearInterval(fadeInterval);
     clearInterval(tickInterval);
+
+    untrackVideo();
 
     setTimeout(() => {
       if (video) video.volume = state.originalVolume;
