@@ -7,7 +7,7 @@
   let state = {
     panelOpen: false,
     timerActive: false,
-    selectedMinutes: 30,
+    selectedSeconds: 30 * 60,
     fadeDuration: 300,
     endTime: null,
     fadeStartTime: null,
@@ -17,6 +17,7 @@
 
   let fadeInterval = null;
   let tickInterval = null;
+  let trackedVideo = null;
 
   const BED_ICON = `<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
     <path d="M2 20v-8a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v8"/><path d="M4 10V6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v4"/><path d="M12 4v6"/><path d="M2 18h20"/>
@@ -106,14 +107,21 @@
   }
 
   function renderSetupPanel(panel, btn) {
-    const presets = [1, 5, 10, 15, 30];
+    const presets = [
+      { label: "5s", seconds: 5 },
+      { label: "1", seconds: 60 },
+      { label: "5", seconds: 300 },
+      { label: "10", seconds: 600 },
+      { label: "15", seconds: 900 },
+      { label: "30", seconds: 1800 },
+    ];
 
     panel.innerHTML = `
       <div class="sf-row">
         ${presets
           .map(
-            (m) =>
-              `<button class="sf-preset-btn ${state.selectedMinutes === m ? "sf--selected" : ""}" data-min="${m}">${m}</button>`
+            (p) =>
+              `<button class="sf-preset-btn ${state.selectedSeconds === p.seconds ? "sf--selected" : ""}" data-sec="${p.seconds}">${p.label}</button>`
           )
           .join("")}
         <button class="sf-start-btn">Start</button>
@@ -122,7 +130,7 @@
 
     panel.querySelectorAll(".sf-preset-btn").forEach((b) => {
       b.addEventListener("click", () => {
-        state.selectedMinutes = parseInt(b.dataset.min);
+        state.selectedSeconds = parseInt(b.dataset.sec);
         panel.querySelectorAll(".sf-preset-btn").forEach((x) => x.classList.remove("sf--selected"));
         b.classList.add("sf--selected");
       });
@@ -169,13 +177,15 @@
 
     state.originalVolume = video.volume;
     state.timerActive = true;
-    state.endTime = Date.now() + state.selectedMinutes * 60 * 1000;
+    state.endTime = Date.now() + state.selectedSeconds * 1000;
     state.fadeStartTime = state.endTime - state.fadeDuration * 1000;
     state.isFading = false;
 
+    trackVideo(video);
+
     chrome.runtime.sendMessage({
       type: "SET_TIMER",
-      minutes: state.selectedMinutes,
+      seconds: state.selectedSeconds,
       fadeDuration: state.fadeDuration,
       originalVolume: state.originalVolume,
     });
