@@ -9,6 +9,7 @@ import type {
   RuntimeMessage,
   SetTimerMessage,
   StartFadeMessage,
+  TimerStateChangedMessage,
 } from "../shared/types";
 
 export function chromeOk(): boolean {
@@ -51,6 +52,18 @@ export function onStartFade(handler: () => void): void {
   chrome.runtime.onMessage.addListener((msg: StartFadeMessage) => {
     if (msg.type === MESSAGE_TYPES.START_FADE) {
       handler();
+    }
+  });
+}
+
+export function onTimerStateChanged(
+  handler: (state: PersistedTimerState | { active: false }) => void,
+): void {
+  if (!chromeOk()) return;
+
+  chrome.runtime.onMessage.addListener((msg: TimerStateChangedMessage) => {
+    if (msg.type === MESSAGE_TYPES.TIMER_STATE_CHANGED) {
+      handler(msg.timerState);
     }
   });
 }

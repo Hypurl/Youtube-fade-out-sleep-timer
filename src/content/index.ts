@@ -1,4 +1,4 @@
-import { getFadeCurvePreference, getFadeDurationPreference, getShowBannerPreference, getTimerPresetPreference, getTimerState, onStartFade, sendCancelTimer, sendSetTimer } from "./chrome";
+import { getFadeCurvePreference, getFadeDurationPreference, getShowBannerPreference, getTimerPresetPreference, getTimerState, onStartFade, onTimerStateChanged, sendCancelTimer, sendSetTimer } from "./chrome";
 import { BED_ICON } from "./constants";
 import { DEFAULT_FADE_CURVE_CONFIG, evaluateFadeCurve, resolveFadeCurvePoints } from "../shared/fade";
 import { DEFAULT_FADE_DURATION_SECONDS } from "../shared/fadeDuration";
@@ -69,6 +69,12 @@ import type { ContentTimerState, PersistedTimerState } from "../shared/types";
     });
   }
 
+  function syncTimerStateFromBackground(): void {
+    getTimerState((resp) => {
+      syncTimerState(resp);
+    });
+  }
+
   function getVideo(): HTMLVideoElement | null {
     return document.querySelector<HTMLVideoElement>("video.html5-main-video")
       || document.querySelector<HTMLVideoElement>("video");
@@ -92,7 +98,7 @@ import type { ContentTimerState, PersistedTimerState } from "../shared/types";
     });
 
     controls.insertBefore(btn, controls.firstChild);
-    checkTimerState(btn);
+    syncTimerStateFromBackground();
   }
 
   function togglePanel(btn: HTMLElement): void {
@@ -256,7 +262,10 @@ import type { ContentTimerState, PersistedTimerState } from "../shared/types";
     document.querySelectorAll(".sf-panel").forEach((p) => p.remove());
   }
 
-  function cancelTimer(): void {
+  function cancelLocalTimer(options?: { notifyBackground?: boolean; restoreVolume?: boolean }): void {
+    const notifyBackground = options?.notifyBackground ?? false;
+    const restoreVolume = options?.restoreVolume ?? true;
+
     state.timerActive = false;
     state.isFading = false;
     state.endTime = null;
@@ -270,14 +279,20 @@ import type { ContentTimerState, PersistedTimerState } from "../shared/types";
     untrackVideo();
 
     const video = getVideo();
-    if (video) video.volume = state.originalVolume;
+    if (video && restoreVolume) video.volume = state.originalVolume;
 
-    sendCancelTimer();
+    if (notifyBackground) {
+      sendCancelTimer();
+    }
 
     const btn = document.querySelector(".sf-player-btn");
     if (btn) btn.classList.remove("sf--active");
 
     document.querySelectorAll(".sf-fading-banner").forEach((b) => b.remove());
+  }
+
+  function cancelTimer(): void {
+    cancelLocalTimer({ notifyBackground: true, restoreVolume: true });
   }
 
   function onVideoPlaying(): void {
@@ -425,9 +440,16 @@ import type { ContentTimerState, PersistedTimerState } from "../shared/types";
     }
   });
 
+  onTimerStateChanged((timerState) => {
+    syncTimerState(timerState);
+  });
+
   function applyStoredTimer(resp: PersistedTimerState): void {
     const now = Date.now();
-    if (now >= resp.endTime) return;
+    if (now >= resp.endTime) {
+      cancelLocalTimer({ notifyBackground: false, restoreVolume: false });
+      return;
+    }
 
     state.timerActive = true;
     state.endTime = resp.endTime;
@@ -450,12 +472,13 @@ import type { ContentTimerState, PersistedTimerState } from "../shared/types";
     tickInterval = setInterval(() => tick(), 1000);
   }
 
-  function checkTimerState(btn: HTMLElement): void {
-    getTimerState((resp) => {
-      if (!resp || !resp.active) return;
-      btn.classList.add("sf--active");
-      applyStoredTimer(resp);
-    });
+  function syncTimerState(resp: PersistedTimerState | { active: false } | undefined): void {
+    if (!resp || !resp.active) {
+      cancelLocalTimer({ notifyBackground: false, restoreVolume: true });
+      return;
+    }
+
+    applyStoredTimer(resp);
   }
 
   function waitForPlayer(): void {
@@ -471,6 +494,17 @@ import type { ContentTimerState, PersistedTimerState } from "../shared/types";
 
   document.addEventListener("yt-navigate-finish", () => {
     setTimeout(waitForPlayer, 300);
+    setTimeout(syncTimerStateFromBackground, 450);
+  });
+
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible") {
+      syncTimerStateFromBackground();
+    }
+  });
+
+  window.addEventListener("focus", () => {
+    syncTimerStateFromBackground();
   });
 
   const observer = new MutationObserver(() => {
@@ -484,6 +518,9 @@ import type { ContentTimerState, PersistedTimerState } from "../shared/types";
   refreshFadeCurvePreference();
   refreshFadeDurationPreference();
   chrome.storage?.onChanged.addListener((changes, areaName) => {
+    if (areaName === "local" && changes.timerState) {
+      syncTimerState(changes.timerState.newValue as PersistedTimerState | { active: false } | undefined);
+    }
     if (areaName === "local" && changes.timerPresetMinutes) {
       refreshTimerPresetsPreference();
     }
@@ -495,4 +532,5 @@ import type { ContentTimerState, PersistedTimerState } from "../shared/types";
     }
   });
   waitForPlayer();
+  syncTimerStateFromBackground();
 })();

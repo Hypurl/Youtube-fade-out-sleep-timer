@@ -45,8 +45,14 @@ export interface StartFadeMessage {
   type: (typeof MESSAGE_TYPES)["START_FADE"];
 }
 
+export interface TimerStateChangedMessage {
+  type: (typeof MESSAGE_TYPES)["TIMER_STATE_CHANGED"];
+  timerState: PersistedTimerState | { active: false };
+}
+
 export type RuntimeMessage =
   | SetTimerMessage
   | CancelTimerMessage
   | GetTimerMessage
-  | StartFadeMessage;
+  | StartFadeMessage
+  | TimerStateChangedMessage;

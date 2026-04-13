@@ -1,6 +1,21 @@
 import { ALARM_BETTER_SLEEP_TIMER_FADE_START, MESSAGE_TYPES } from "../shared/constants";
 import type { PersistedTimerState, RuntimeMessage } from "../shared/types";
 
+async function broadcastToYouTubeTabs(message: RuntimeMessage): Promise<void> {
+  const tabs = await chrome.tabs.query({ url: "*://www.youtube.com/*" });
+  await Promise.all(
+    tabs
+      .filter((tab) => tab.id != null)
+      .map(async (tab) => {
+        try {
+          await chrome.tabs.sendMessage(tab.id as number, message);
+        } catch {
+          // Tab might not have content script available, ignore
+        }
+      }),
+  );
+}
+
 chrome.alarms.onAlarm.addListener(async (alarm) => {
   if (alarm.name !== ALARM_BETTER_SLEEP_TIMER_FADE_START) return;
 
@@ -35,17 +50,29 @@ chrome.runtime.onMessage.addListener((msg: RuntimeMessage, _sender, sendResponse
       active: true,
     };
 
-    chrome.storage.local.set({
-      timerState,
+    chrome.storage.local.set({ timerState }, () => {
+      const stateChanged: RuntimeMessage = {
+        type: MESSAGE_TYPES.TIMER_STATE_CHANGED,
+        timerState,
+      };
+      void broadcastToYouTubeTabs(stateChanged);
+      sendResponse({ ok: true });
     });
-
-    sendResponse({ ok: true });
+    return true;
   }
 
   if (msg.type === MESSAGE_TYPES.CANCEL_TIMER) {
     chrome.alarms.clear(ALARM_BETTER_SLEEP_TIMER_FADE_START);
-    chrome.storage.local.set({ timerState: { active: false } });
-    sendResponse({ ok: true });
+    const timerState = { active: false } as const;
+    chrome.storage.local.set({ timerState }, () => {
+      const stateChanged: RuntimeMessage = {
+        type: MESSAGE_TYPES.TIMER_STATE_CHANGED,
+        timerState,
+      };
+      void broadcastToYouTubeTabs(stateChanged);
+      sendResponse({ ok: true });
+    });
+    return true;
   }
 
   if (msg.type === MESSAGE_TYPES.GET_TIMER) {
