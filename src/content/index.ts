@@ -18,8 +18,8 @@ import type { ContentTimerState, PersistedTimerState } from "../shared/types";
 (function () {
   "use strict";
 
-  if ((window as { __sleepFadeLoaded?: boolean }).__sleepFadeLoaded) return;
-  (window as { __sleepFadeLoaded?: boolean }).__sleepFadeLoaded = true;
+  if ((window as { __betterSleepTimerLoaded?: boolean }).__betterSleepTimerLoaded) return;
+  (window as { __betterSleepTimerLoaded?: boolean }).__betterSleepTimerLoaded = true;
 
   const state: ContentTimerState = {
     panelOpen: false,
@@ -82,7 +82,7 @@ import type { ContentTimerState, PersistedTimerState } from "../shared/types";
 
     const btn = document.createElement("button");
     btn.className = "sf-player-btn";
-    btn.setAttribute("aria-label", "Sleep Fade Timer");
+    btn.setAttribute("aria-label", "BetterSleepTimer");
     btn.setAttribute("title", "");
     btn.innerHTML = BED_ICON;
 

@@ -1,4 +1,4 @@
-export const ALARM_SLEEP_FADE_START = "sleep-fade-start" as const;
+export const ALARM_BETTER_SLEEP_TIMER_FADE_START = "better-sleep-timer-fade-start" as const;
 
 export const MESSAGE_TYPES = {
   START_FADE: "START_FADE",

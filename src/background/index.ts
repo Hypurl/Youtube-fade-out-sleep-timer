@@ -1,8 +1,8 @@
-import { ALARM_SLEEP_FADE_START, MESSAGE_TYPES } from "../shared/constants";
+import { ALARM_BETTER_SLEEP_TIMER_FADE_START, MESSAGE_TYPES } from "../shared/constants";
 import type { PersistedTimerState, RuntimeMessage } from "../shared/types";
 
 chrome.alarms.onAlarm.addListener(async (alarm) => {
-  if (alarm.name !== ALARM_SLEEP_FADE_START) return;
+  if (alarm.name !== ALARM_BETTER_SLEEP_TIMER_FADE_START) return;
 
   const tabs = await chrome.tabs.query({ url: "*://www.youtube.com/*" });
   for (const tab of tabs) {
@@ -21,8 +21,8 @@ chrome.runtime.onMessage.addListener((msg: RuntimeMessage, _sender, sendResponse
     const delaySeconds = Math.max(0, msg.seconds - msg.fadeDuration);
     const delayMinutes = delaySeconds / 60;
 
-    chrome.alarms.clear(ALARM_SLEEP_FADE_START);
-    chrome.alarms.create(ALARM_SLEEP_FADE_START, {
+    chrome.alarms.clear(ALARM_BETTER_SLEEP_TIMER_FADE_START);
+    chrome.alarms.create(ALARM_BETTER_SLEEP_TIMER_FADE_START, {
       delayInMinutes: Math.max(0.08, delayMinutes),
     });
 
@@ -43,7 +43,7 @@ chrome.runtime.onMessage.addListener((msg: RuntimeMessage, _sender, sendResponse
   }
 
   if (msg.type === MESSAGE_TYPES.CANCEL_TIMER) {
-    chrome.alarms.clear(ALARM_SLEEP_FADE_START);
+    chrome.alarms.clear(ALARM_BETTER_SLEEP_TIMER_FADE_START);
     chrome.storage.local.set({ timerState: { active: false } });
     sendResponse({ ok: true });
   }

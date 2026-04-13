@@ -192,7 +192,7 @@ checkbox.addEventListener("change", () => {
 });
 
 fullResetBtn.addEventListener("click", () => {
-  const confirmed = window.confirm("Reset all Sleep Fade settings to defaults?");
+  const confirmed = window.confirm("Reset all BetterSleepTimer settings to defaults?");
   if (!confirmed) return;
 
   checkbox.checked = true;
