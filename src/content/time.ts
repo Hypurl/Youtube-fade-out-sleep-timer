@@ -1,8 +1,26 @@
-import { SNAP_POINTS } from "./constants";
+import { DEFAULT_TIMER_PRESETS } from "../shared/timerPresets";
+import type { TimerPresetPoint } from "../shared/timerPresets";
 
-const SLIDER_MIN = Math.min(...SNAP_POINTS.map((p) => p.position));
-const SLIDER_MAX = Math.max(...SNAP_POINTS.map((p) => p.position));
-const SLIDER_SPAN = Math.max(0.000001, SLIDER_MAX - SLIDER_MIN);
+let timerPresets: TimerPresetPoint[] = DEFAULT_TIMER_PRESETS;
+let sliderMin = Math.min(...timerPresets.map((p) => p.position));
+let sliderMax = Math.max(...timerPresets.map((p) => p.position));
+let sliderSpan = Math.max(0.000001, sliderMax - sliderMin);
+
+function recalcSliderBounds(): void {
+  sliderMin = Math.min(...timerPresets.map((p) => p.position));
+  sliderMax = Math.max(...timerPresets.map((p) => p.position));
+  sliderSpan = Math.max(0.000001, sliderMax - sliderMin);
+}
+
+export function setTimerPresets(presets: TimerPresetPoint[]): void {
+  if (!Array.isArray(presets) || presets.length < 2) return;
+  timerPresets = presets;
+  recalcSliderBounds();
+}
+
+export function getTimerPresets(): TimerPresetPoint[] {
+  return timerPresets;
+}
 
 export function formatTime(seconds: number): string {
   const s = Math.max(0, Math.round(seconds));
@@ -30,35 +48,35 @@ export function fadeCurve(t: number): number {
 }
 
 export function secondsToSlider(seconds: number): number {
-  for (let i = 0; i < SNAP_POINTS.length - 1; i++) {
-    const a = SNAP_POINTS[i], b = SNAP_POINTS[i + 1];
+  for (let i = 0; i < timerPresets.length - 1; i++) {
+    const a = timerPresets[i], b = timerPresets[i + 1];
     if (seconds <= a.seconds) return a.position;
     if (seconds <= b.seconds) {
       const t = (seconds - a.seconds) / (b.seconds - a.seconds);
       return a.position + t * (b.position - a.position);
     }
   }
-  return SNAP_POINTS[SNAP_POINTS.length - 1].position;
+  return timerPresets[timerPresets.length - 1].position;
 }
 
 export function sliderToSeconds(value: number): number {
-  const v = Math.max(SLIDER_MIN, Math.min(SLIDER_MAX, value));
-  for (let i = 0; i < SNAP_POINTS.length - 1; i++) {
-    const a = SNAP_POINTS[i], b = SNAP_POINTS[i + 1];
+  const v = Math.max(sliderMin, Math.min(sliderMax, value));
+  for (let i = 0; i < timerPresets.length - 1; i++) {
+    const a = timerPresets[i], b = timerPresets[i + 1];
     if (v <= a.position) return a.seconds;
     if (v <= b.position) {
       const t = (v - a.position) / (b.position - a.position);
       return Math.round(a.seconds + t * (b.seconds - a.seconds));
     }
   }
-  return SNAP_POINTS[SNAP_POINTS.length - 1].seconds;
+  return timerPresets[timerPresets.length - 1].seconds;
 }
 
 export function nearestPresetIndexFromSlider(sliderVal: number): number {
   let nearestIdx = 0;
   let nearestDist = Number.POSITIVE_INFINITY;
 
-  SNAP_POINTS.forEach((p, i) => {
+  timerPresets.forEach((p, i) => {
     const d = Math.abs(sliderVal - p.position);
     if (d < nearestDist) {
       nearestDist = d;
@@ -77,8 +95,8 @@ export function snapSeconds(seconds: number): number {
   const sliderVal = secondsToSlider(seconds);
   const nearest = nearestPresetIndexFromSlider(sliderVal);
 
-  const distance = Math.abs(sliderVal - SNAP_POINTS[nearest].position) / SLIDER_SPAN;
-  const target = SNAP_POINTS[nearest].seconds;
+  const distance = Math.abs(sliderVal - timerPresets[nearest].position) / sliderSpan;
+  const target = timerPresets[nearest].seconds;
 
   if (distance <= HARD_LOCK_RADIUS) return target;
   if (distance >= SNAP_RADIUS) return seconds;
@@ -91,6 +109,6 @@ export function activePresetIndex(seconds: number): number {
   const ACTIVE_RADIUS = 0.012;
   const sliderVal = secondsToSlider(seconds);
   const nearest = nearestPresetIndexFromSlider(sliderVal);
-  const distance = Math.abs(sliderVal - SNAP_POINTS[nearest].position) / SLIDER_SPAN;
+  const distance = Math.abs(sliderVal - timerPresets[nearest].position) / sliderSpan;
   return distance <= ACTIVE_RADIUS ? nearest : -1;
 }

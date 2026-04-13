@@ -11,15 +11,51 @@ import {
   FADE_DURATION_PRESETS,
   sanitizeFadeDurationSeconds,
 } from "../shared/fadeDuration";
+import {
+  DEFAULT_TIMER_PRESET_MINUTES,
+  TIMER_PRESET_COUNT,
+  sanitizeTimerPresetMinutes,
+} from "../shared/timerPresets";
 import type { FadeCurveConfig, FadeCurvePresetId } from "../shared/fade";
 
 const checkbox = document.getElementById("showBanner") as HTMLInputElement;
 const durationPresetContainer = document.getElementById("fadeDurationPresets") as HTMLElement;
 const presetContainer = document.getElementById("curvePresets") as HTMLElement;
 const slidersContainer = document.getElementById("curveSliders") as HTMLElement;
+const timerPresetEditor = document.getElementById("timerPresetEditor") as HTMLElement;
 
 let curveConfig: FadeCurveConfig = { ...DEFAULT_FADE_CURVE_CONFIG };
 let fadeDurationSeconds = DEFAULT_FADE_DURATION_SECONDS;
+let timerPresetMinutes: number[] = [...DEFAULT_TIMER_PRESET_MINUTES];
+
+function saveTimerPresets(): void {
+  chrome.storage.local.set({ timerPresetMinutes: [...timerPresetMinutes] });
+}
+
+function renderTimerPresetEditor(): void {
+  timerPresetEditor.innerHTML = timerPresetMinutes
+    .map((minutes, idx) => {
+      return `
+        <div class="timer-preset-item">
+          <label for="timerPreset${idx}">Preset ${idx + 1}</label>
+          <input id="timerPreset${idx}" type="number" min="1" max="720" step="1" value="${minutes}" data-idx="${idx}" />
+        </div>
+      `;
+    })
+    .join("");
+
+  timerPresetEditor.querySelectorAll<HTMLInputElement>("input[data-idx]").forEach((input) => {
+    input.addEventListener("change", () => {
+      const idx = Number.parseInt(input.dataset.idx ?? "0", 10);
+      const parsed = Number.parseInt(input.value, 10);
+      const next = [...timerPresetMinutes];
+      next[idx] = Number.isNaN(parsed) ? timerPresetMinutes[idx] : parsed;
+      timerPresetMinutes = sanitizeTimerPresetMinutes(next);
+      renderTimerPresetEditor();
+      saveTimerPresets();
+    });
+  });
+}
 
 function saveFadeDuration(): void {
   chrome.storage.local.set({ fadeDurationSeconds });
@@ -135,10 +171,12 @@ function renderSliders(): void {
   });
 }
 
-chrome.storage.local.get(["showBanner", "fadeCurveConfig", "fadeDurationSeconds"], (data) => {
+chrome.storage.local.get(["showBanner", "fadeCurveConfig", "fadeDurationSeconds", "timerPresetMinutes"], (data) => {
   checkbox.checked = data.showBanner !== false;
   curveConfig = sanitizeFadeCurveConfig(data.fadeCurveConfig);
   fadeDurationSeconds = sanitizeFadeDurationSeconds(data.fadeDurationSeconds);
+  timerPresetMinutes = sanitizeTimerPresetMinutes(data.timerPresetMinutes).slice(0, TIMER_PRESET_COUNT);
+  renderTimerPresetEditor();
   renderFadeDurationPresets();
   renderPresets();
   renderSliders();

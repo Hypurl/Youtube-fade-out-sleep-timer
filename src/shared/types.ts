@@ -1,5 +1,6 @@
 import type { MESSAGE_TYPES } from "./constants";
 import type { FadeCurveConfig } from "./fade";
+import type { TimerPresetPoint } from "./timerPresets";
 
 export interface PersistedTimerState {
   endTime: number;
@@ -14,6 +15,7 @@ export interface ContentTimerState {
   panelOpen: boolean;
   timerActive: boolean;
   selectedSeconds: number;
+  timerPresets: TimerPresetPoint[];
   fadeDuration: number;
   fadeCurveConfig: FadeCurveConfig;
   fadeCurvePoints: number[];

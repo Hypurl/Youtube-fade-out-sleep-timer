@@ -1,7 +1,9 @@
 import { MESSAGE_TYPES } from "../shared/constants";
 import { DEFAULT_FADE_CURVE_CONFIG, sanitizeFadeCurveConfig } from "../shared/fade";
 import { DEFAULT_FADE_DURATION_SECONDS, sanitizeFadeDurationSeconds } from "../shared/fadeDuration";
+import { DEFAULT_TIMER_PRESETS, createTimerPresetsFromMinutes } from "../shared/timerPresets";
 import type { FadeCurveConfig } from "../shared/fade";
+import type { TimerPresetPoint } from "../shared/timerPresets";
 import type {
   PersistedTimerState,
   RuntimeMessage,
@@ -83,5 +85,16 @@ export function getFadeDurationPreference(callback: (seconds: number) => void): 
 
   chrome.storage.local.get("fadeDurationSeconds", (data) => {
     callback(sanitizeFadeDurationSeconds(data.fadeDurationSeconds));
+  });
+}
+
+export function getTimerPresetPreference(callback: (presets: TimerPresetPoint[]) => void): void {
+  if (!chromeOk()) {
+    callback(DEFAULT_TIMER_PRESETS);
+    return;
+  }
+
+  chrome.storage.local.get("timerPresetMinutes", (data) => {
+    callback(createTimerPresetsFromMinutes(data.timerPresetMinutes));
   });
 }

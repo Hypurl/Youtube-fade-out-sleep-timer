@@ -170,6 +170,36 @@
       font-size: 10px;
       color: #87a9c2;
     }
+    .timer-presets-editor {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 6px;
+    }
+    .timer-preset-item {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .timer-preset-item label {
+      font-size: 10px;
+      color: #87a9c2;
+    }
+    .timer-preset-item input {
+      width: 100%;
+      box-sizing: border-box;
+      border: 1px solid rgba(84, 119, 146, 0.55);
+      background: rgba(84, 119, 146, 0.14);
+      color: #EFD2B0;
+      border-radius: 6px;
+      height: 26px;
+      padding: 0 8px;
+      font-size: 12px;
+      outline: none;
+    }
+    .timer-preset-item input:focus {
+      border-color: rgba(255, 197, 112, 0.75);
+      box-shadow: 0 0 0 2px rgba(255, 197, 112, 0.2);
+    }
   </style>
 </head>
 <body>
@@ -196,6 +226,10 @@
 
   <div class="section-title">Curve duration</div>
   <div id="fadeDurationPresets" class="duration-presets"></div>
+
+  <div class="section-title">Set timer presets</div>
+  <div id="timerPresetEditor" class="timer-presets-editor"></div>
+  <div class="hint">Values are in minutes and are auto-sorted.</div>
 
   <script src="./popup.js"></script>
 </body>

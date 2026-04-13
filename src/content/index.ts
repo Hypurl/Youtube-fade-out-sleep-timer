@@ -1,12 +1,15 @@
-import { getFadeCurvePreference, getFadeDurationPreference, getShowBannerPreference, getTimerState, onStartFade, sendCancelTimer, sendSetTimer } from "./chrome";
-import { BED_ICON, SNAP_POINTS } from "./constants";
+import { getFadeCurvePreference, getFadeDurationPreference, getShowBannerPreference, getTimerPresetPreference, getTimerState, onStartFade, sendCancelTimer, sendSetTimer } from "./chrome";
+import { BED_ICON } from "./constants";
 import { DEFAULT_FADE_CURVE_CONFIG, evaluateFadeCurve, resolveFadeCurvePoints } from "../shared/fade";
 import { DEFAULT_FADE_DURATION_SECONDS } from "../shared/fadeDuration";
+import { DEFAULT_TIMER_PRESETS } from "../shared/timerPresets";
 import {
   activePresetIndex,
   formatDuration,
   formatTime,
+  getTimerPresets,
   secondsToSlider,
+  setTimerPresets,
   sliderToSeconds,
   snapSeconds,
 } from "./time";
@@ -22,6 +25,7 @@ import type { ContentTimerState, PersistedTimerState } from "../shared/types";
     panelOpen: false,
     timerActive: false,
     selectedSeconds: 30 * 60,
+    timerPresets: DEFAULT_TIMER_PRESETS,
     fadeDuration: DEFAULT_FADE_DURATION_SECONDS,
     fadeCurveConfig: DEFAULT_FADE_CURVE_CONFIG,
     fadeCurvePoints: resolveFadeCurvePoints(DEFAULT_FADE_CURVE_CONFIG),
@@ -34,6 +38,8 @@ import type { ContentTimerState, PersistedTimerState } from "../shared/types";
   let fadeInterval: ReturnType<typeof setInterval> | null = null;
   let tickInterval: ReturnType<typeof setInterval> | null = null;
   let trackedVideo: HTMLVideoElement | null = null;
+
+  setTimerPresets(DEFAULT_TIMER_PRESETS);
 
   function refreshFadeCurvePreference(): void {
     getFadeCurvePreference((config) => {
@@ -48,6 +54,17 @@ import type { ContentTimerState, PersistedTimerState } from "../shared/types";
     getFadeDurationPreference((seconds) => {
       if (!state.timerActive) {
         state.fadeDuration = seconds;
+      }
+    });
+  }
+
+  function refreshTimerPresetsPreference(): void {
+    getTimerPresetPreference((presets) => {
+      state.timerPresets = presets;
+      setTimerPresets(presets);
+
+      if (!state.timerActive) {
+        state.selectedSeconds = snapSeconds(state.selectedSeconds);
       }
     });
   }
@@ -120,10 +137,11 @@ import type { ContentTimerState, PersistedTimerState } from "../shared/types";
   }
 
   function renderSetupPanel(panel: HTMLElement, btn: HTMLElement): void {
+    const presets = getTimerPresets();
     const sliderVal = secondsToSlider(state.selectedSeconds);
     const activeIdx = activePresetIndex(state.selectedSeconds);
-    const sliderMin = Math.min(...SNAP_POINTS.map((p) => p.position));
-    const sliderMax = Math.max(...SNAP_POINTS.map((p) => p.position));
+    const sliderMin = Math.min(...presets.map((p) => p.position));
+    const sliderMax = Math.max(...presets.map((p) => p.position));
     const sliderStep = Math.max(0.000001, (sliderMax - sliderMin) / 1000);
 
     panel.innerHTML = `
@@ -135,7 +153,7 @@ import type { ContentTimerState, PersistedTimerState } from "../shared/types";
         <div class="sf-presets">
           <div class="sf-presets-label">Presets</div>
           <div class="sf-presets-grid">
-            ${SNAP_POINTS.map((p, i) =>
+            ${presets.map((p, i) =>
               `<button type="button" class="sf-tick${i === activeIdx ? " sf--active" : ""}" data-idx="${i}">${p.label}</button>`
             ).join("")}
           </div>
@@ -167,8 +185,10 @@ import type { ContentTimerState, PersistedTimerState } from "../shared/types";
     ticks.forEach((t) => {
       t.addEventListener("click", () => {
         const idx = Number.parseInt(t.dataset.idx ?? "0", 10);
-        state.selectedSeconds = SNAP_POINTS[idx].seconds;
-        slider.value = String(SNAP_POINTS[idx].position);
+        const nextPreset = presets[idx];
+        if (!nextPreset) return;
+        state.selectedSeconds = nextPreset.seconds;
+        slider.value = String(nextPreset.position);
         syncUI();
       });
     });
@@ -460,9 +480,13 @@ import type { ContentTimerState, PersistedTimerState } from "../shared/types";
   });
 
   observer.observe(document.body, { childList: true, subtree: true });
+  refreshTimerPresetsPreference();
   refreshFadeCurvePreference();
   refreshFadeDurationPreference();
   chrome.storage?.onChanged.addListener((changes, areaName) => {
+    if (areaName === "local" && changes.timerPresetMinutes) {
+      refreshTimerPresetsPreference();
+    }
     if (areaName === "local" && changes.fadeCurveConfig) {
       refreshFadeCurvePreference();
     }
