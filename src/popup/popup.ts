@@ -29,6 +29,42 @@ let curveConfig: FadeCurveConfig = { ...DEFAULT_FADE_CURVE_CONFIG };
 let fadeDurationSeconds = DEFAULT_FADE_DURATION_SECONDS;
 let timerPresetMinutes: number[] = [...DEFAULT_TIMER_PRESET_MINUTES];
 
+function renderCurveGuide(): void {
+  const sliders = Array.from(slidersContainer.querySelectorAll<HTMLInputElement>(".eq-slider"));
+  if (!sliders.length) return;
+
+  const containerRect = slidersContainer.getBoundingClientRect();
+  const width = Math.max(1, Math.round(containerRect.width));
+  const height = Math.max(1, Math.round(containerRect.height));
+
+  let svg = slidersContainer.querySelector<SVGSVGElement>(".curve-guide");
+  if (!svg) {
+    svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    svg.classList.add("curve-guide");
+    slidersContainer.prepend(svg);
+  }
+
+  svg.setAttribute("viewBox", `0 0 ${width} ${height}`);
+  svg.setAttribute("preserveAspectRatio", "none");
+
+  const points = sliders.map((slider) => {
+    const r = slider.getBoundingClientRect();
+    const min = Number.parseFloat(slider.min || "0");
+    const max = Number.parseFloat(slider.max || "100");
+    const value = Number.parseFloat(slider.value || "0");
+    const ratio = max > min ? (value - min) / (max - min) : 0;
+    const x = r.left - containerRect.left + r.width / 2;
+    const y = r.top - containerRect.top + (1 - ratio) * r.height;
+    return { x, y };
+  });
+
+  const polylinePoints = points.map((p) => `${p.x},${p.y}`).join(" ");
+  svg.innerHTML = `
+    <polyline points="${polylinePoints}"></polyline>
+    ${points.map((p) => `<circle cx="${p.x}" cy="${p.y}" r="3"></circle>`).join("")}
+  `;
+}
+
 function saveTimerPresets(): void {
   chrome.storage.local.set({ timerPresetMinutes: [...timerPresetMinutes] });
 }
@@ -174,9 +210,12 @@ function renderSliders(): void {
         valueEl.textContent = `${Math.round(resolveFadeCurvePoints(curveConfig)[idx] * 100)}%`;
       }
 
+      renderCurveGuide();
       saveCurveConfig();
     });
   });
+
+  requestAnimationFrame(() => renderCurveGuide());
 }
 
 chrome.storage.local.get(["showBanner", "fadeCurveConfig", "fadeDurationSeconds", "timerPresetMinutes"], (data) => {
@@ -216,4 +255,8 @@ fullResetBtn.addEventListener("click", () => {
   });
 
   applyStateToUI();
+});
+
+window.addEventListener("resize", () => {
+  renderCurveGuide();
 });
