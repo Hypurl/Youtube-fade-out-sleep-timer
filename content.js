@@ -108,6 +108,8 @@
 
   function renderSetupPanel(panel, btn) {
     const presets = [
+      { label: "5s", seconds: 5 },
+      { label: "1", seconds: 60 },
       { label: "5", seconds: 300 },
       { label: "10", seconds: 600 },
       { label: "15", seconds: 900 },
