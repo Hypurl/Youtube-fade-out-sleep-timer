@@ -1,10 +1,21 @@
 (function () {
   "use strict";
 
-  if (window.__sleepFadeLoaded) return;
-  window.__sleepFadeLoaded = true;
+  if ((window as any).__sleepFadeLoaded) return;
+  (window as any).__sleepFadeLoaded = true;
 
-  let state = {
+  interface TimerState {
+    panelOpen: boolean;
+    timerActive: boolean;
+    selectedSeconds: number;
+    fadeDuration: number;
+    endTime: number | null;
+    fadeStartTime: number | null;
+    originalVolume: number;
+    isFading: boolean;
+  }
+
+  const state: TimerState = {
     panelOpen: false,
     timerActive: false,
     selectedSeconds: 30 * 60,
@@ -15,19 +26,23 @@
     isFading: false,
   };
 
-  let fadeInterval = null;
-  let tickInterval = null;
-  let trackedVideo = null;
+  function chromeOk(): boolean {
+    try { return !!chrome.runtime?.id; } catch { return false; }
+  }
+
+  let fadeInterval: ReturnType<typeof setInterval> | null = null;
+  let tickInterval: ReturnType<typeof setInterval> | null = null;
+  let trackedVideo: HTMLVideoElement | null = null;
 
   const BED_ICON = `<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
     <path d="M2 20v-8a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v8"/><path d="M4 10V6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v4"/><path d="M12 4v6"/><path d="M2 18h20"/>
   </svg>`;
 
-  function getVideo() {
-    return document.querySelector("video.html5-main-video") || document.querySelector("video");
+  function getVideo(): HTMLVideoElement | null {
+    return document.querySelector<HTMLVideoElement>("video.html5-main-video") || document.querySelector<HTMLVideoElement>("video");
   }
 
-  function formatTime(seconds) {
+  function formatTime(seconds: number): string {
     const s = Math.max(0, Math.round(seconds));
     const m = Math.floor(s / 60);
     const sec = s % 60;
@@ -39,11 +54,11 @@
     return `${m}:${String(sec).padStart(2, "0")}`;
   }
 
-  function fadeCurve(t) {
+  function fadeCurve(t: number): number {
     return Math.cos(t * Math.PI * 0.5);
   }
 
-  function injectButton() {
+  function injectButton(): void {
     if (document.querySelector(".sf-player-btn")) return;
 
     const controls = document.querySelector(".ytp-right-controls");
@@ -65,7 +80,7 @@
     checkTimerState(btn);
   }
 
-  function togglePanel(btn) {
+  function togglePanel(btn: HTMLElement): void {
     const existing = document.querySelector(".sf-panel");
     if (existing) {
       existing.remove();
@@ -76,7 +91,7 @@
     renderPanel(btn);
   }
 
-  function renderPanel(btn) {
+  function renderPanel(btn: HTMLElement): void {
     document.querySelectorAll(".sf-panel").forEach((p) => p.remove());
 
     if (!state.panelOpen) return;
@@ -84,8 +99,8 @@
     const panel = document.createElement("div");
     panel.className = "sf-panel";
 
-    const closeOnOutside = (e) => {
-      if (!panel.contains(e.target) && !btn.contains(e.target)) {
+    const closeOnOutside = (e: Event) => {
+      if (!panel.contains(e.target as Node) && !btn.contains(e.target as Node)) {
         panel.remove();
         state.panelOpen = false;
         document.removeEventListener("click", closeOnOutside, true);
@@ -106,7 +121,7 @@
     btn.appendChild(panel);
   }
 
-  function renderSetupPanel(panel, btn) {
+  function renderSetupPanel(panel: HTMLElement, btn: HTMLElement): void {
     const presets = [
       { label: "5s", seconds: 5 },
       { label: "1", seconds: 60 },
@@ -128,50 +143,50 @@
       </div>
     `;
 
-    panel.querySelectorAll(".sf-preset-btn").forEach((b) => {
+    panel.querySelectorAll<HTMLButtonElement>(".sf-preset-btn").forEach((b) => {
       b.addEventListener("click", () => {
-        state.selectedSeconds = parseInt(b.dataset.sec);
+        state.selectedSeconds = parseInt(b.dataset.sec!);
         panel.querySelectorAll(".sf-preset-btn").forEach((x) => x.classList.remove("sf--selected"));
         b.classList.add("sf--selected");
       });
     });
 
-    panel.querySelector(".sf-start-btn").addEventListener("click", () => {
+    panel.querySelector(".sf-start-btn")!.addEventListener("click", () => {
       startTimer(btn);
     });
   }
 
-  function renderActivePanel(panel) {
-    const remaining = Math.max(0, (state.endTime - Date.now()) / 1000);
+  function renderActivePanel(panel: HTMLElement): void {
+    const remaining = Math.max(0, (state.endTime! - Date.now()) / 1000);
 
     panel.innerHTML = `
       <div class="sf-row">
         <div class="sf-countdown">
           <span class="sf-remaining">${formatTime(remaining)}</span>
-          <span class="sf-countdown-label">${state.isFading ? "fading…" : "remaining"}</span>
+          <span class="sf-countdown-label">${state.isFading ? "fading\u2026" : "remaining"}</span>
         </div>
         <button class="sf-start-btn sf--cancel">Cancel</button>
       </div>
     `;
 
-    const display = panel.querySelector(".sf-remaining");
+    const display = panel.querySelector(".sf-remaining")!;
     const countdownTick = setInterval(() => {
       if (!document.contains(panel)) {
         clearInterval(countdownTick);
         return;
       }
-      const r = Math.max(0, (state.endTime - Date.now()) / 1000);
+      const r = Math.max(0, (state.endTime! - Date.now()) / 1000);
       display.textContent = formatTime(r);
     }, 1000);
 
-    panel.querySelector(".sf-start-btn").addEventListener("click", () => {
+    panel.querySelector(".sf-start-btn")!.addEventListener("click", () => {
       cancelTimer();
-      const btn = document.querySelector(".sf-player-btn");
-      renderSetupPanel(panel, btn);
+      const btn = document.querySelector<HTMLElement>(".sf-player-btn");
+      if (btn) renderSetupPanel(panel, btn);
     });
   }
 
-  function startTimer(btn) {
+  function startTimer(btn: HTMLElement): void {
     const video = getVideo();
     if (!video) return;
 
@@ -183,7 +198,7 @@
 
     trackVideo(video);
 
-    chrome.runtime.sendMessage({
+    if (chromeOk()) chrome.runtime.sendMessage({
       type: "SET_TIMER",
       seconds: state.selectedSeconds,
       fadeDuration: state.fadeDuration,
@@ -191,21 +206,21 @@
     });
 
     btn.classList.add("sf--active");
-    clearInterval(tickInterval);
+    if (tickInterval) clearInterval(tickInterval);
     tickInterval = setInterval(() => tick(), 1000);
 
     state.panelOpen = false;
     document.querySelectorAll(".sf-panel").forEach((p) => p.remove());
   }
 
-  function cancelTimer() {
+  function cancelTimer(): void {
     state.timerActive = false;
     state.isFading = false;
     state.endTime = null;
     state.fadeStartTime = null;
 
-    clearInterval(fadeInterval);
-    clearInterval(tickInterval);
+    if (fadeInterval) clearInterval(fadeInterval);
+    if (tickInterval) clearInterval(tickInterval);
     fadeInterval = null;
     tickInterval = null;
 
@@ -214,7 +229,7 @@
     const video = getVideo();
     if (video) video.volume = state.originalVolume;
 
-    chrome.runtime.sendMessage({ type: "CANCEL_TIMER" });
+    if (chromeOk()) chrome.runtime.sendMessage({ type: "CANCEL_TIMER" });
 
     const btn = document.querySelector(".sf-player-btn");
     if (btn) btn.classList.remove("sf--active");
@@ -222,16 +237,15 @@
     document.querySelectorAll(".sf-fading-banner").forEach((b) => b.remove());
   }
 
-  function onVideoPlaying() {
+  function onVideoPlaying(): void {
     if (!state.timerActive) return;
     const video = getVideo();
     if (!video) return;
 
     if (state.isFading) {
-      // Re-apply current fade volume to the new/restarted video
       const now = Date.now();
-      const elapsed = now - state.fadeStartTime;
-      const total = state.endTime - state.fadeStartTime;
+      const elapsed = now - state.fadeStartTime!;
+      const total = state.endTime! - state.fadeStartTime!;
       const t = Math.min(1, elapsed / total);
       video.volume = Math.max(0, state.originalVolume * fadeCurve(t));
     }
@@ -241,7 +255,7 @@
     }
   }
 
-  function trackVideo(video) {
+  function trackVideo(video: HTMLVideoElement): void {
     if (trackedVideo) {
       trackedVideo.removeEventListener("playing", onVideoPlaying);
     }
@@ -249,14 +263,14 @@
     video.addEventListener("playing", onVideoPlaying);
   }
 
-  function untrackVideo() {
+  function untrackVideo(): void {
     if (trackedVideo) {
       trackedVideo.removeEventListener("playing", onVideoPlaying);
       trackedVideo = null;
     }
   }
 
-  function tick() {
+  function tick(): void {
     if (!state.timerActive) return;
 
     const video = getVideo();
@@ -269,43 +283,43 @@
 
     const now = Date.now();
 
-    if (now >= state.fadeStartTime && !state.isFading) {
+    if (now >= state.fadeStartTime! && !state.isFading) {
       beginFade();
     }
 
-    if (now >= state.endTime) {
+    if (now >= state.endTime!) {
       finishTimer();
     }
   }
 
-  function beginFade() {
+  function beginFade(): void {
     state.isFading = true;
 
     showFadeBanner();
 
-    clearInterval(fadeInterval);
+    if (fadeInterval) clearInterval(fadeInterval);
     fadeInterval = setInterval(() => {
       const video = getVideo();
       if (!video) return;
 
       const now = Date.now();
-      const elapsed = now - state.fadeStartTime;
-      const total = state.endTime - state.fadeStartTime;
+      const elapsed = now - state.fadeStartTime!;
+      const total = state.endTime! - state.fadeStartTime!;
       const t = Math.min(1, elapsed / total);
 
       const volumeMultiplier = fadeCurve(t);
       video.volume = Math.max(0, state.originalVolume * volumeMultiplier);
 
-      const banner = document.querySelector(".sf-fading-banner");
+      const banner = document.querySelector<HTMLElement>(".sf-fading-banner");
       if (banner) {
-        const remaining = Math.max(0, (state.endTime - now) / 1000);
-        banner.querySelector(".sf-banner-time").textContent = formatTime(remaining);
-        banner.style.setProperty("--progress", Math.max(0, 1 - t));
+        const remaining = Math.max(0, (state.endTime! - now) / 1000);
+        banner.querySelector(".sf-banner-time")!.textContent = formatTime(remaining);
+        banner.style.setProperty("--progress", String(Math.max(0, 1 - t)));
       }
     }, 500);
   }
 
-  function finishTimer() {
+  function finishTimer(): void {
     const video = getVideo();
     if (video) {
       video.volume = 0;
@@ -314,8 +328,8 @@
 
     state.timerActive = false;
     state.isFading = false;
-    clearInterval(fadeInterval);
-    clearInterval(tickInterval);
+    if (fadeInterval) clearInterval(fadeInterval);
+    if (tickInterval) clearInterval(tickInterval);
 
     untrackVideo();
 
@@ -323,7 +337,7 @@
       if (video) video.volume = state.originalVolume;
     }, 1000);
 
-    chrome.runtime.sendMessage({ type: "CANCEL_TIMER" });
+    if (chromeOk()) chrome.runtime.sendMessage({ type: "CANCEL_TIMER" });
 
     const btn = document.querySelector(".sf-player-btn");
     if (btn) btn.classList.remove("sf--active");
@@ -331,37 +345,46 @@
     document.querySelectorAll(".sf-fading-banner").forEach((b) => b.remove());
   }
 
-  function showFadeBanner() {
+  function showFadeBanner(): void {
     document.querySelectorAll(".sf-fading-banner").forEach((b) => b.remove());
 
+    if (!chromeOk()) { _renderFadeBanner(); return; }
+    chrome.storage.local.get("showBanner", (data) => {
+      if (data.showBanner === false) return;
+      _renderFadeBanner();
+    });
+  }
+
+  function _renderFadeBanner(): void {
     const player = document.querySelector("#movie_player") || document.querySelector(".html5-video-player");
     if (!player) return;
 
     const banner = document.createElement("div");
     banner.className = "sf-fading-banner";
 
-    const remaining = Math.max(0, (state.endTime - Date.now()) / 1000);
+    const remaining = Math.max(0, (state.endTime! - Date.now()) / 1000);
     banner.innerHTML = `
       <span>Fading out in <strong class="sf-banner-time">${formatTime(remaining)}</strong></span>
       <button class="sf-banner-cancel">Cancel</button>
     `;
 
-    banner.querySelector(".sf-banner-cancel").addEventListener("click", (e) => {
+    banner.querySelector(".sf-banner-cancel")!.addEventListener("click", (e) => {
       e.stopPropagation();
       cancelTimer();
     });
 
-    player.style.position = "relative";
+    (player as HTMLElement).style.position = "relative";
     player.appendChild(banner);
   }
 
-  chrome.runtime.onMessage.addListener((msg) => {
+  if (chromeOk()) chrome.runtime.onMessage.addListener((msg) => {
     if (msg.type === "START_FADE" && state.timerActive && !state.isFading) {
       beginFade();
     }
   });
 
-  function checkTimerState(btn) {
+  function checkTimerState(btn: HTMLElement): void {
+    if (!chromeOk()) return;
     chrome.runtime.sendMessage({ type: "GET_TIMER" }, (resp) => {
       if (chrome.runtime.lastError || !resp || !resp.active) return;
 
@@ -381,12 +404,12 @@
         beginFade();
       }
 
-      clearInterval(tickInterval);
+      if (tickInterval) clearInterval(tickInterval);
       tickInterval = setInterval(() => tick(), 1000);
     });
   }
 
-  function waitForPlayer() {
+  function waitForPlayer(): void {
     const check = () => {
       const controls = document.querySelector(".ytp-right-controls");
       if (controls) {

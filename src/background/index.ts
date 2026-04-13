@@ -12,7 +12,7 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
   }
 });
 
-chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
+chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
   if (msg.type === "SET_TIMER") {
     const delaySeconds = Math.max(0, msg.seconds - msg.fadeDuration);
     const delayMinutes = delaySeconds / 60;
