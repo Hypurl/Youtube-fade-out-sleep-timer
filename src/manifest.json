@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "BetterSleepTimer",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "description": "Gently fades YouTube volume before pausing.",
   "permissions": ["storage", "alarms"],
   "host_permissions": ["*://www.youtube.com/*"],
